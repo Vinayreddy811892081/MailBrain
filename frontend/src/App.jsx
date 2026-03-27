@@ -9,11 +9,15 @@ import Payment from "./pages/Payment";
 
 // ✅ Only checks login
 function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, subscriptionActive } = useAuth(); // ✅ added subscriptionActive
 
   if (loading) return null;
 
   if (!user) return <Navigate to="/login" replace />;
+
+  if (!subscriptionActive && location.pathname === "/app") {
+    return <Navigate to="/payment" replace />;
+  }
 
   return children;
 }
@@ -37,7 +41,6 @@ function GuestRoute({ children }) {
   if (loading) return null;
   return user ? <Navigate to="/app" replace /> : children;
 }
-
 export default function App() {
   return (
     <AuthProvider>
