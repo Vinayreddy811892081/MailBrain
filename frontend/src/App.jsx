@@ -16,7 +16,6 @@ function PrivateRoute({ children }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // 🚨 IMPORTANT FIX
   if (!subscriptionActive && location.pathname !== "/payment") {
     return <Navigate to="/payment" replace />;
   }
