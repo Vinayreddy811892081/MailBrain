@@ -1,30 +1,37 @@
-// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+
 import Landing from "./pages/Landing";
 import { LoginPage, RegisterPage } from "./pages/Auth";
 import AppPage from "./pages/App";
 import Payment from "./pages/Payment";
-import { useLocation } from "react-router-dom";
 
+// ✅ Only checks login
 function PrivateRoute({ children }) {
-  const { user, loading, subscriptionActive } = useAuth();
-  const location = useLocation();
+  const { user, loading } = useAuth();
 
   if (loading) return null;
 
-  // Not logged in
   if (!user) return <Navigate to="/login" replace />;
 
-  // 🔥 ONLY block /app (NOT payment page)
-  if (!subscriptionActive && location.pathname === "/app") {
+  return children;
+}
+
+// ✅ Handles subscription ONLY for dashboard
+function AppRoute({ children }) {
+  const { subscriptionActive, loading } = useAuth();
+
+  if (loading) return null;
+
+  if (!subscriptionActive) {
     return <Navigate to="/payment" replace />;
   }
 
   return children;
 }
 
+// ✅ Guest routes
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -35,24 +42,11 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: "var(--bg2)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-              fontFamily: "DM Sans, sans-serif",
-              fontSize: "14px",
-            },
-            success: {
-              iconTheme: { primary: "#4dffb8", secondary: "#0f0f11" },
-            },
-            error: { iconTheme: { primary: "#ff4d6a", secondary: "#0f0f11" } },
-          }}
-        />
+        <Toaster position="top-right" />
+
         <Routes>
           <Route path="/" element={<Landing />} />
+
           <Route
             path="/login"
             element={
@@ -61,6 +55,7 @@ export default function App() {
               </GuestRoute>
             }
           />
+
           <Route
             path="/register"
             element={
@@ -69,15 +64,20 @@ export default function App() {
               </GuestRoute>
             }
           />
+
+          {/* ✅ Dashboard protected by subscription */}
           <Route
             path="/app"
             element={
               <PrivateRoute>
-                <AppPage />
+                <AppRoute>
+                  <AppPage />
+                </AppRoute>
               </PrivateRoute>
             }
           />
 
+          {/* ✅ Payment ONLY needs login */}
           <Route
             path="/payment"
             element={
@@ -86,6 +86,7 @@ export default function App() {
               </PrivateRoute>
             }
           />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

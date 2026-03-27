@@ -43,14 +43,20 @@ export default function AppPage() {
   const [loading, setLoading] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [connected, setConnected] = useState(!!user?.emailAccount?.connected);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const skipPayment = sessionStorage.getItem("skipPayment");
+    if (user?.emailAccount?.connected) {
+      setConnected(true);
+    }
+  }, [user]);
 
-    // clear after use
-    sessionStorage.removeItem("skipPayment");
-  }, [subscriptionActive, daysLeft]);
+  useEffect(() => {
+    if (connected) {
+      fetchEmails();
+      fetchCounts();
+    }
+  }, [connected, selectedCategory]);
 
   const fetchEmails = useCallback(
     async (refresh = false) => {
@@ -60,9 +66,11 @@ export default function AppPage() {
           category: selectedCategory === "all" ? undefined : selectedCategory,
           refresh: refresh ? "1" : undefined,
         });
+        console.log("EMAIL API RESPONSE:", res.data); // 👈 ADD THIS
         setEmails(res.data.emails || []);
         if (!res.data.fromCache || refresh) fetchCounts();
       } catch (err) {
+        console.log("EMAIL API RESPONSE:", res.data); // 👈 ADD THIS
         if (err.response?.data?.code === "NOT_CONNECTED") {
           setConnected(false);
         } else {

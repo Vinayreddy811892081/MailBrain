@@ -97,10 +97,7 @@ export default function Payment() {
             <h3>Plan Details</h3>
             <button
               className="icon-btn"
-              onClick={async () => {
-                await refreshUser(); // 🔥 FORCE latest data
-                navigate("/app", { replace: true });
-              }}
+              onClick={() => navigate("/app", { replace: true })}
             >
               &times;
             </button>
