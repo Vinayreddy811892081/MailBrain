@@ -6,7 +6,7 @@ import Landing from "./pages/Landing";
 import { LoginPage, RegisterPage } from "./pages/Auth";
 import AppPage from "./pages/App";
 import Payment from "./pages/Payment";
-import { Navigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 function PrivateRoute({ children }) {
   const { user, loading, subscriptionActive } = useAuth();
