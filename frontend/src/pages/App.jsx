@@ -46,7 +46,8 @@ export default function AppPage() {
   const [connected, setConnected] = useState(!!user?.emailAccount?.connected);
 
   useEffect(() => {
-    if (!subscriptionActive) {
+    if (!subscriptionActive && daysLeft <= 0) {
+      toast.error("Your trial expired. Please subscribe.");
       navigate("/payment");
       return;
     }
