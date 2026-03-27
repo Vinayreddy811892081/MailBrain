@@ -48,10 +48,6 @@ export default function AppPage() {
   useEffect(() => {
     const skipPayment = sessionStorage.getItem("skipPayment");
 
-    if (!subscriptionActive && daysLeft <= 0 && !skipPayment) {
-      navigate("/payment");
-    }
-
     // clear after use
     sessionStorage.removeItem("skipPayment");
   }, [subscriptionActive, daysLeft]);

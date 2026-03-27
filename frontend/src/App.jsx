@@ -25,6 +25,18 @@ function PrivateRoute({ children }) {
   return children;
 }
 
+function SubscriptionRoute({ children }) {
+  const { user, loading, subscriptionActive } = useAuth();
+
+  if (loading) return null;
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (!subscriptionActive) return <Navigate to="/payment" replace />;
+
+  return children;
+}
+
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -73,18 +85,13 @@ export default function App() {
             path="/app"
             element={
               <PrivateRoute>
-                <AppPage />
+                <SubscriptionRoute>
+                  <AppPage />
+                </SubscriptionRoute>
               </PrivateRoute>
             }
           />
-          <Route
-            path="/payment"
-            element={
-              <PrivateRoute>
-                <Payment />
-              </PrivateRoute>
-            }
-          />
+          <Route path="/payment" element={<Payment />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
