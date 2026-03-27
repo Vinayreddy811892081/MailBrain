@@ -9,7 +9,7 @@ const cron = require("node-cron");
 const app = express();
 app.use(
   cors({
-    origin: "https://your-frontend.vercel.app",
+    origin: "https://mail-brain-sepia.vercel.app/",
     credentials: true,
   }),
 );
