@@ -37,15 +37,21 @@ export default function Payment() {
       const { data } = await paymentAPI.createOrder();
       console.log("Order response:", data);
 
-      if (!data.orderId) throw new Error("Invalid order from server");
+      if (!data.orderId || !data.amount || !data.currency) {
+        throw new Error("Invalid order from server");
+      }
+
+      // Convert amount to number, ensure currency is uppercase
+      const amount = Number(data.amount);
+      const currency = String(data.currency).toUpperCase();
 
       const options = {
-        key: data.keyId,
-        amount: data.amount,
-        currency: data.currency,
+        key: data.keyId, // Razorpay key
+        amount: data.amount, // in paise
+        currency: "INR",
         name: "MailBrain",
         description: "Subscription Payment",
-        order_id: data.orderId,
+        order_id: data.orderId, // must match backend
         handler: async function (response) {
           try {
             const verifyRes = await paymentAPI.verify({
@@ -69,8 +75,8 @@ export default function Payment() {
           }
         },
         prefill: {
-          name: data.userName,
-          email: data.userEmail,
+          name: data.userName || "",
+          email: data.userEmail || "",
         },
         theme: { color: "#6c63ff" },
       };
