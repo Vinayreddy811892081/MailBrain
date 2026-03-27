@@ -101,3 +101,7 @@ app.listen(PORT, () => {
   console.log(`📧 IMAP-based email - no Gmail API required`);
   console.log(`🔒 Privacy: raw emails never stored\n`);
 });
+
+app.get("/", (req, res) => {
+  res.send("🚀 MailBrain API is running");
+});
