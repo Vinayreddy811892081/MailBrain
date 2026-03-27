@@ -95,7 +95,7 @@ export default function Payment() {
         <div className="pay-header">
           <div className="modal-header">
             <h3>Plan Details</h3>
-            <button className="icon-btn" onClick={() => navigate("/")}>
+            <button className="icon-btn" onClick={() => navigate("/app")}>
               &times;
             </button>
           </div>
