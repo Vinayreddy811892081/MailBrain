@@ -1,14 +1,7 @@
 // pages/Payment.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Brain,
-  CreditCard,
-  Smartphone,
-  CheckCircle,
-  ArrowRight,
-  Copy,
-} from "lucide-react";
+import { Brain, CreditCard, CheckCircle, ArrowRight } from "lucide-react";
 import { paymentAPI } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -19,9 +12,11 @@ export default function Payment() {
   const [tab, setTab] = useState("razorpay"); // 'razorpay' | 'upi'
   const [utrNumber, setUtrNumber] = useState("");
   const [loading, setLoading] = useState(false);
-  const { user, refreshUser, daysLeft, subscriptionActive } = useAuth();
+
+  const { refreshUser, daysLeft, subscriptionActive } = useAuth();
   const navigate = useNavigate();
 
+  // ✅ Fetch payment status on mount
   useEffect(() => {
     paymentAPI
       .status()
@@ -29,6 +24,7 @@ export default function Payment() {
       .catch(() => {});
   }, []);
 
+  // ✅ Handle Razorpay payment
   const handleRazorpay = async () => {
     setLoading(true);
     try {
@@ -47,14 +43,19 @@ export default function Payment() {
         handler: async (response) => {
           try {
             await paymentAPI.verify(response);
-            await refreshUser();
+            const subActive = await refreshUser(); // ✅ Wait for subscription refresh
             toast.success("🎉 Subscription activated!");
-            navigate("/app");
+            if (subActive) navigate("/app"); // ✅ Only navigate if subscription active
           } catch {
             toast.error("Payment verification failed. Contact support.");
           }
         },
-        modal: { ondismiss: () => toast.error("Payment cancelled") },
+        modal: {
+          ondismiss: async () => {
+            await refreshUser(); // Refresh subscription even if dismissed
+            navigate("/app"); // Safe fallback
+          },
+        },
       };
 
       const rzp = new window.Razorpay(options);
@@ -66,6 +67,7 @@ export default function Payment() {
     }
   };
 
+  // ✅ Handle UPI confirmation
   const handleUpiConfirm = async () => {
     if (utrNumber.trim().length < 10) {
       toast.error("Enter a valid UTR number (12 digits)");
@@ -74,9 +76,9 @@ export default function Payment() {
     setLoading(true);
     try {
       await paymentAPI.confirmUpi({ utrNumber: utrNumber.trim() });
-      await refreshUser();
+      const subActive = await refreshUser();
       toast.success("✅ Payment confirmed! Subscription active.");
-      navigate("/app");
+      if (subActive) navigate("/app");
     } catch (err) {
       toast.error(err.response?.data?.error || "Confirmation failed");
     } finally {
@@ -84,9 +86,16 @@ export default function Payment() {
     }
   };
 
+  // ✅ Copy UPI ID
   const copyUpi = () => {
     navigator.clipboard.writeText(payStatus?.upiId || "");
     toast.success("UPI ID copied!");
+  };
+
+  // ✅ Handle modal close button
+  const handleClose = async () => {
+    await refreshUser(); // Ensure subscriptionActive is up-to-date
+    navigate("/app"); // Navigate safely
   };
 
   return (
@@ -95,10 +104,7 @@ export default function Payment() {
         <div className="pay-header">
           <div className="modal-header">
             <h3>Plan Details</h3>
-            <button
-              className="icon-btn"
-              onClick={() => navigate("/app", { replace: true })}
-            >
+            <button className="icon-btn" onClick={handleClose}>
               &times;
             </button>
           </div>
@@ -161,6 +167,7 @@ export default function Payment() {
             </button>
           </div>
         )}
+
         <p className="pay-footer-note">
           Questions? Email us at{" "}
           <a href="mailto:support@mailbrain.app">support@mailbrain.app</a>
