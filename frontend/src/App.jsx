@@ -14,25 +14,12 @@ function PrivateRoute({ children }) {
 
   if (loading) return null;
 
-  // Not logged in
   if (!user) return <Navigate to="/login" replace />;
 
-  // 🔥 ONLY block /app, NOT /payment
+  // 🚨 IMPORTANT FIX
   if (!subscriptionActive && location.pathname !== "/payment") {
     return <Navigate to="/payment" replace />;
   }
-
-  return children;
-}
-
-function SubscriptionRoute({ children }) {
-  const { user, loading, subscriptionActive } = useAuth();
-
-  if (loading) return null;
-
-  if (!user) return <Navigate to="/login" replace />;
-
-  if (!subscriptionActive) return <Navigate to="/payment" replace />;
 
   return children;
 }
@@ -85,12 +72,11 @@ export default function App() {
             path="/app"
             element={
               <PrivateRoute>
-                <SubscriptionRoute>
-                  <AppPage />
-                </SubscriptionRoute>
+                <AppPage />
               </PrivateRoute>
             }
           />
+
           <Route
             path="/payment"
             element={
