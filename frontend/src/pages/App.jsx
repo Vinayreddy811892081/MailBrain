@@ -45,6 +45,12 @@ export default function AppPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [connected, setConnected] = useState(!!user?.emailAccount?.connected);
 
+  useEffect(() => {
+    if (!subscriptionActive && location.pathname !== "/payment") {
+      navigate("/payment");
+    }
+  }, [subscriptionActive]);
+
   const fetchEmails = useCallback(
     async (refresh = false) => {
       setLoading(true);
