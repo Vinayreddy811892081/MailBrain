@@ -23,17 +23,10 @@ export default function Payment() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadStatus = async () => {
-      try {
-        const res = await paymentAPI.status();
-        setPayStatus(res?.data || {});
-      } catch (err) {
-        console.log("Payment status failed");
-        setPayStatus({});
-      }
-    };
-
-    loadStatus();
+    paymentAPI
+      .status()
+      .then((res) => setPayStatus(res.data))
+      .catch(() => {});
   }, []);
 
   const handleRazorpay = async () => {
@@ -91,11 +84,21 @@ export default function Payment() {
     }
   };
 
+  const copyUpi = () => {
+    navigator.clipboard.writeText(payStatus?.upiId || "");
+    toast.success("UPI ID copied!");
+  };
+
   return (
     <div className="pay-page">
       <div className="pay-card fade-in">
         <div className="pay-header">
-          <h3>Plan Details</h3>
+          <div className="modal-header">
+            <h3>Plan Details</h3>
+            <button className="icon-btn" onClick={() => navigate("/app")}>
+              &times;
+            </button>
+          </div>
           <Brain size={28} color="#6c63ff" />
           <h1>MailBrain Pro</h1>
           <p>
