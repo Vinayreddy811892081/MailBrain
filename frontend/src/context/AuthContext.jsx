@@ -9,15 +9,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [daysLeft, setDaysLeft] = useState(0);
+  const [token, setToken] = useState(null); // ✅ store token
 
-  // ✅ Fetch user on mount
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem("mb_token");
-      if (!token) {
+      const storedToken = localStorage.getItem("mb_token");
+      if (!storedToken) {
         setLoading(false);
         return;
       }
+      setToken(storedToken); // ✅ set token in state
 
       try {
         const res = await authAPI.me();
@@ -28,6 +29,7 @@ export const AuthProvider = ({ children }) => {
       } catch (err) {
         localStorage.removeItem("mb_token");
         localStorage.removeItem("mb_user");
+        setToken(null);
         setUser(null);
         setSubscriptionActive(false);
         setDaysLeft(0);
@@ -39,25 +41,24 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, []);
 
-  // ✅ Login method
-  const login = (token, userData, subActive = false, days = 0) => {
-    localStorage.setItem("mb_token", token);
+  const login = (newToken, userData, subActive = false, days = 0) => {
+    localStorage.setItem("mb_token", newToken);
     localStorage.setItem("mb_user", JSON.stringify(userData));
+    setToken(newToken); // ✅ save token
     setUser(userData);
     setSubscriptionActive(subActive);
     setDaysLeft(days);
   };
 
-  // ✅ Logout method
   const logout = () => {
     localStorage.removeItem("mb_token");
     localStorage.removeItem("mb_user");
+    setToken(null); // ✅ clear token
     setUser(null);
     setSubscriptionActive(false);
     setDaysLeft(0);
   };
 
-  // ✅ Refresh user and subscription status
   const refreshUser = async () => {
     try {
       const res = await authAPI.me();
@@ -65,11 +66,12 @@ export const AuthProvider = ({ children }) => {
       setUser(res.data.user);
       setSubscriptionActive(subActive);
       setDaysLeft(res.data.daysLeft ?? 0);
-      return subActive; // return subscription status for navigation
+      return subActive;
     } catch {
       setUser(null);
       setSubscriptionActive(false);
       setDaysLeft(0);
+      setToken(null);
       return false;
     }
   };
@@ -78,6 +80,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        token, // ✅ expose token
         loading,
         subscriptionActive,
         daysLeft,

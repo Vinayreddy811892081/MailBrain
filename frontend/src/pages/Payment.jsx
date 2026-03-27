@@ -9,61 +9,88 @@ import "./Payment.css";
 
 export default function Payment() {
   const [payStatus, setPayStatus] = useState(null);
-  const [tab, setTab] = useState("razorpay"); // 'razorpay' | 'upi'
+  const [tab, setTab] = useState("razorpay");
   const [utrNumber, setUtrNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { refreshUser, daysLeft, subscriptionActive } = useAuth();
+  const { token, refreshUser, daysLeft, subscriptionActive } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Fetch payment status on mount
+  // Fetch subscription/payment status
   useEffect(() => {
     paymentAPI
       .status()
       .then((res) => setPayStatus(res.data))
-      .catch(() => {});
+      .catch((err) => console.error("Status fetch error:", err));
   }, []);
 
-  // ✅ Handle Razorpay payment
-  const handleRazorpay = async () => {
+  // Handle Razorpay payment
+  const handlePayment = async () => {
+    if (!token) {
+      toast.error("Please login to proceed with payment.");
+      navigate("/login");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await paymentAPI.createOrder();
+      const { data } = await paymentAPI.createOrder();
+      console.log("Order response:", data);
+
+      if (!data.orderId) throw new Error("Invalid order from server");
+
       const options = {
-        key: keyId,
-        amount,
-        currency: "INR",
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
         name: "MailBrain",
-        description: "Monthly Subscription",
-        order_id: orderId,
-        prefill: { name: userName, email: userEmail },
-        theme: { color: "#6c63ff" },
-        handler: async (response) => {
+        description: "Subscription Payment",
+        order_id: data.orderId,
+        handler: async function (response) {
           try {
-            await paymentAPI.verify(response);
-            const subActive = await refreshUser(); // Wait for subscription refresh
-            toast.success("🎉 Subscription activated!");
-            if (subActive) navigate("/app");
-          } catch {
-            toast.error("Payment verification failed. Contact support.");
+            const verifyRes = await paymentAPI.verify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            if (verifyRes.data.success) {
+              toast.success("Payment successful! Subscription activated.");
+              await refreshUser();
+              navigate("/app");
+            } else {
+              toast.error(
+                verifyRes.data.error || "Payment verification failed",
+              );
+            }
+          } catch (err) {
+            console.error("Verification error:", err);
+            toast.error("Payment verification error");
           }
         },
-        modal: {
-          ondismiss: async () => {
-            await refreshUser();
-            navigate("/app");
-          },
+        prefill: {
+          name: data.userName,
+          email: data.userEmail,
         },
+        theme: { color: "#6c63ff" },
       };
+
+      if (!window.Razorpay) {
+        toast.error("Razorpay SDK not loaded. Refresh page and try again.");
+        return;
+      }
+
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch {
-      toast.error("Could not initiate payment.");
+    } catch (err) {
+      console.error("Payment initiation error:", err);
+      toast.error("Could not initiate payment: " + err.message);
     } finally {
       setLoading(false);
     }
   };
-  // ✅ Handle UPI confirmation
+
+  // Handle manual UPI confirmation
   const handleUpiConfirm = async () => {
     if (utrNumber.trim().length < 10) {
       toast.error("Enter a valid UTR number (12 digits)");
@@ -71,10 +98,13 @@ export default function Payment() {
     }
     setLoading(true);
     try {
-      await paymentAPI.confirmUpi({ utrNumber: utrNumber.trim() });
-      const subActive = await refreshUser();
+      await paymentAPI.confirmUpi({
+        utrNumber: utrNumber.trim(),
+        screenshotNote: "",
+      });
+      await refreshUser();
       toast.success("✅ Payment confirmed! Subscription active.");
-      if (subActive) navigate("/app");
+      navigate("/app");
     } catch (err) {
       toast.error(err.response?.data?.error || "Confirmation failed");
     } finally {
@@ -82,16 +112,16 @@ export default function Payment() {
     }
   };
 
-  // ✅ Copy UPI ID
+  // Copy UPI ID to clipboard
   const copyUpi = () => {
     navigator.clipboard.writeText(payStatus?.upiId || "");
     toast.success("UPI ID copied!");
   };
 
-  // ✅ Handle modal close button
+  // Close modal / navigate back
   const handleClose = async () => {
-    await refreshUser(); // Ensure subscriptionActive is up-to-date
-    navigate("/app"); // Navigate safely
+    await refreshUser();
+    navigate("/app");
   };
 
   return (
@@ -133,7 +163,6 @@ export default function Payment() {
           ))}
         </ul>
 
-        {/* Tabs */}
         <div className="pay-tabs">
           <button
             className={`pay-tab ${tab === "razorpay" ? "active" : ""}`}
@@ -150,7 +179,7 @@ export default function Payment() {
             </p>
             <button
               className="btn btn-primary pay-btn"
-              onClick={handleRazorpay}
+              onClick={handlePayment}
               disabled={loading}
             >
               {loading ? (
