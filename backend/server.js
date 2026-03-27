@@ -4,21 +4,15 @@ const cors = require("cors");
 const express = require("express");
 const mongoose = require("mongoose");
 const cron = require("node-cron");
-
 const app = express();
-app.use(
-  cors({
-    origin: "https://mail-brain-sepia.vercel.app/",
-    credentials: true,
-  }),
-);
 
 // ─── Middleware ───────────────────────────────────────────────
 app.use(
   cors({
     origin: [
-      process.env.FRONTEND_URL || "http://localhost:3000",
+      "https://mail-brain-sepia.vercel.app",
       "http://localhost:5173",
+      "http://localhost:3000",
     ],
     credentials: true,
   }),
