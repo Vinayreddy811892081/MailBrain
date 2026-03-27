@@ -45,17 +45,6 @@ export default function AppPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [connected, setConnected] = useState(!!user?.emailAccount?.connected);
 
-  useEffect(() => {
-    if (!subscriptionActive && daysLeft <= 0) {
-      navigate("/payment");
-      return;
-    }
-    if (connected) {
-      fetchEmails();
-      fetchCounts();
-    }
-  }, [connected, selectedCategory]);
-
   const fetchEmails = useCallback(
     async (refresh = false) => {
       setLoading(true);
