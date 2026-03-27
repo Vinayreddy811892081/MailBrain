@@ -26,7 +26,7 @@ function PrivateRoute({ children }) {
 function AppRoute({ children }) {
   const { subscriptionActive, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <div>Loading...</div>; // Wait until context finishes loading
 
   if (!subscriptionActive) {
     return <Navigate to="/payment" replace />;

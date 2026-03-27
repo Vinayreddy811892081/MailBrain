@@ -29,8 +29,6 @@ export default function Payment() {
     setLoading(true);
     try {
       const res = await paymentAPI.createOrder();
-      const { orderId, amount, keyId, userName, userEmail } = res.data;
-
       const options = {
         key: keyId,
         amount,
@@ -43,30 +41,28 @@ export default function Payment() {
         handler: async (response) => {
           try {
             await paymentAPI.verify(response);
-            const subActive = await refreshUser(); // ✅ Wait for subscription refresh
+            const subActive = await refreshUser(); // Wait for subscription refresh
             toast.success("🎉 Subscription activated!");
-            if (subActive) navigate("/app"); // ✅ Only navigate if subscription active
+            if (subActive) navigate("/app");
           } catch {
             toast.error("Payment verification failed. Contact support.");
           }
         },
         modal: {
           ondismiss: async () => {
-            await refreshUser(); // Refresh subscription even if dismissed
-            navigate("/app"); // Safe fallback
+            await refreshUser();
+            navigate("/app");
           },
         },
       };
-
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch (err) {
-      toast.error("Could not initiate payment. Try UPI option.");
+    } catch {
+      toast.error("Could not initiate payment.");
     } finally {
       setLoading(false);
     }
   };
-
   // ✅ Handle UPI confirmation
   const handleUpiConfirm = async () => {
     if (utrNumber.trim().length < 10) {
