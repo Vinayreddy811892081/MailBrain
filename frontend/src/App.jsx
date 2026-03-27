@@ -14,9 +14,11 @@ function PrivateRoute({ children }) {
 
   if (loading) return null;
 
+  // Not logged in
   if (!user) return <Navigate to="/login" replace />;
 
-  if (!subscriptionActive && location.pathname !== "/payment") {
+  // 🔥 ONLY block /app (NOT payment page)
+  if (!subscriptionActive && location.pathname === "/app") {
     return <Navigate to="/payment" replace />;
   }
 
