@@ -46,15 +46,15 @@ export default function AppPage() {
   const [connected, setConnected] = useState(!!user?.emailAccount?.connected);
 
   useEffect(() => {
-    if (!subscriptionActive && daysLeft <= 0) {
+    const skipPayment = sessionStorage.getItem("skipPayment");
+
+    if (!subscriptionActive && daysLeft <= 0 && !skipPayment) {
       navigate("/payment");
-      return;
     }
-    if (connected) {
-      fetchEmails();
-      fetchCounts();
-    }
-  }, [connected, selectedCategory]);
+
+    // clear after use
+    sessionStorage.removeItem("skipPayment");
+  }, [subscriptionActive, daysLeft]);
 
   const fetchEmails = useCallback(
     async (refresh = false) => {
