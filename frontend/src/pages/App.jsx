@@ -47,7 +47,6 @@ export default function AppPage() {
 
   useEffect(() => {
     if (!subscriptionActive && daysLeft <= 0) {
-      toast.error("Your trial expired. Please subscribe.");
       navigate("/payment");
       return;
     }

@@ -23,10 +23,17 @@ export default function Payment() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    paymentAPI
-      .status()
-      .then((res) => setPayStatus(res.data))
-      .catch(() => {});
+    const loadStatus = async () => {
+      try {
+        const res = await paymentAPI.status();
+        setPayStatus(res?.data || {});
+      } catch (err) {
+        console.log("Payment status failed");
+        setPayStatus({});
+      }
+    };
+
+    loadStatus();
   }, []);
 
   const handleRazorpay = async () => {
@@ -82,11 +89,6 @@ export default function Payment() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const copyUpi = () => {
-    navigator.clipboard.writeText(payStatus?.upiId || "");
-    toast.success("UPI ID copied!");
   };
 
   return (

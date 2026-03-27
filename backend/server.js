@@ -6,6 +6,10 @@ const mongoose = require("mongoose");
 const cron = require("node-cron");
 const app = express();
 
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 // ─── Middleware ───────────────────────────────────────────────
 app.use(
   cors({
