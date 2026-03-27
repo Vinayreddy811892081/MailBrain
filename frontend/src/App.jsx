@@ -6,17 +6,21 @@ import Landing from "./pages/Landing";
 import { LoginPage, RegisterPage } from "./pages/Auth";
 import AppPage from "./pages/App";
 import Payment from "./pages/Payment";
+import { Navigate, useLocation } from "react-router-dom";
 
 function PrivateRoute({ children }) {
   const { user, loading, subscriptionActive } = useAuth();
+  const location = useLocation();
 
   if (loading) return null;
 
   // Not logged in
   if (!user) return <Navigate to="/login" replace />;
 
-  // Not subscribed → force payment page
-  if (!subscriptionActive) return <Navigate to="/payment" replace />;
+  // 🔥 ONLY block /app, NOT /payment
+  if (!subscriptionActive && location.pathname !== "/payment") {
+    return <Navigate to="/payment" replace />;
+  }
 
   return children;
 }
