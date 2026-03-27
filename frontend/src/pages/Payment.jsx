@@ -93,15 +93,6 @@ export default function Payment() {
     <div className="pay-page">
       <div className="pay-card fade-in">
         <div className="pay-header">
-          <div className="modal-header">
-            <h3>Plan Details</h3>
-            <button
-              className="icon-btn"
-              onClick={() => navigate("/", { replace: true })}
-            >
-              &times;
-            </button>
-          </div>
           <Brain size={28} color="#6c63ff" />
           <h1>MailBrain Pro</h1>
           <p>
