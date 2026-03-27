@@ -1,0 +1,92 @@
+/* Auth.css */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 28px;
+  color: var(--text);
+}
+
+.auth-card h2 {
+  font-size: 28px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+
+.auth-sub {
+  color: var(--text2);
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+.auth-form { display: flex; flex-direction: column; gap: 18px; }
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+}
+
+.pass-wrap { position: relative; }
+.pass-wrap .input { padding-right: 44px; }
+.pass-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+.pass-toggle:hover { color: var(--text2); }
+
+.auth-submit {
+  width: 100%;
+  justify-content: center;
+  padding: 13px;
+  font-size: 15px;
+  margin-top: 4px;
+  min-height: 48px;
+}
+
+.auth-switch {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text3);
+  margin-top: 20px;
+}
+
+.auth-switch a {
+  color: var(--accent2);
+  font-weight: 500;
+}
+.auth-switch a:hover { text-decoration: underline; }

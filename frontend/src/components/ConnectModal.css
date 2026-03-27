@@ -1,0 +1,87 @@
+/* ConnectModal.css */
+.connect-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(77,255,184,0.05);
+  border: 1px solid rgba(77,255,184,0.15);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.connect-privacy svg { flex-shrink: 0; margin-top: 1px; }
+
+.connect-hint {
+  display: flex;
+  gap: 10px;
+  background: var(--bills-bg);
+  border: 1px solid rgba(255,184,77,0.15);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--bills);
+  line-height: 1.5;
+}
+
+.connect-hint svg { flex-shrink: 0; margin-top: 1px; }
+
+.provider-list {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.provider-list p {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.provider-tag {
+  padding: 4px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+}
+
+.pass-wrap { position: relative; }
+.pass-wrap .input { padding-right: 44px; }
+.pass-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
