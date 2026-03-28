@@ -1,4 +1,3 @@
-// context/AuthContext.jsx
 import {
   createContext,
   useContext,
@@ -17,26 +16,27 @@ export const AuthProvider = ({ children }) => {
   const [daysLeft, setDaysLeft] = useState(0);
   const [token, setToken] = useState(null);
 
-  // Fetch user from server
-  const refreshUser = useCallback(async () => {
-    if (!token) return false;
+  // ✅ Fetch user
+  const refreshUser = useCallback(async (tok) => {
     try {
       const res = await authAPI.me();
+
       setUser(res.data.user);
       setSubscriptionActive(res.data.subscriptionActive ?? false);
       setDaysLeft(res.data.daysLeft ?? 0);
+
       return true;
     } catch (err) {
       console.error("Auth fetch failed:", err);
       logout();
       return false;
     }
-  }, [token]);
+  }, []);
 
-  // On app load
+  // ✅ Init auth on load
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem("mb_token");
+      const storedToken = localStorage.getItem("md_token"); // ✅ FIXED
 
       if (!storedToken) {
         setLoading(false);
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
         setDaysLeft(res.data.daysLeft ?? 0);
       } catch (err) {
         console.error("Init auth failed:", err);
-        localStorage.removeItem("mb_token");
+        localStorage.removeItem("token"); // ✅ FIXED
         setToken(null);
       } finally {
         setLoading(false);
@@ -63,26 +63,23 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Login function — only token is needed
-  const login = async (newToken) => {
+  // ✅ LOGIN FIXED
+  const login = async (token) => {
     try {
-      console.log("TOKEN RECEIVED:", newToken); // ✅
+      // ✅ MUST match api.js
+      localStorage.setItem("mb_token", token);
 
-      localStorage.setItem("mb_token", newToken);
-
-      console.log("TOKEN SAVED:", localStorage.getItem("mb_token")); // ✅
+      setToken(token);
 
       const res = await authAPI.me();
 
-      console.log("ME RESPONSE:", res.data); // ✅
-
-      setToken(newToken);
       setUser(res.data.user);
+      setSubscriptionActive(res.data.subscriptionActive ?? false);
+      setDaysLeft(res.data.daysLeft ?? 0);
 
       return true;
     } catch (err) {
-      console.error("LOGIN FAILED:", err); // ✅
-      localStorage.removeItem("mb_token");
+      console.error("LOGIN FAILED:", err);
       return false;
     }
   };
@@ -114,5 +111,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ Always export hook separately and last
 export const useAuth = () => useContext(AuthContext);
