@@ -1,16 +1,18 @@
 // routes/auth.js
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const { auth } = require("../middleware/auth");
+
 const router = express.Router();
 
+// ─── TOKEN GENERATOR ───────────────────────
 const generateToken = (userId) =>
   jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
 
-// Register
-const bcrypt = require("bcryptjs");
-
+// ─── REGISTER ─────────────────────────────
+// ─── REGISTER ─────────────────────────────
 router.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -25,12 +27,11 @@ router.post("/register", async (req, res) => {
     if (existing)
       return res.status(409).json({ error: "Email already registered" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    // ✅ Just store plain password - pre-save hook will hash it
     const user = await User.create({
       name,
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password, // <-- DO NOT hash manually
       subscriptionStatus: "trial",
       trialEnds: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
     });
@@ -44,50 +45,35 @@ router.post("/register", async (req, res) => {
     });
   } catch (err) {
     console.error("Register error:", err);
-    res.status(500).json({ error: err.message }); // 👈 show real error
+    res.status(500).json({ error: err.message });
   }
 });
-
-// Login
-// 🔐 LOGIN
+// ─── LOGIN ───────────────────────────────
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-
     console.log("📥 LOGIN REQUEST:", req.body);
 
-    if (!email || !password) {
-      console.log("❌ Missing email or password");
+    if (!email || !password)
       return res.status(400).json({ error: "Email and password required" });
-    }
 
-    // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
-
     console.log("👤 USER FOUND:", user ? "YES" : "NO");
 
-    if (!user) {
-      console.log("❌ User not found");
+    if (!user)
       return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    // Debug passwords
-    console.log("🔑 Entered Password:", password);
-    console.log("🔐 Stored Hash:", user.password);
 
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
 
+    console.log("🔑 Entered Password:", password);
+    console.log("🔐 Stored Hash:", user.password);
     console.log("✅ Password Match:", isMatch);
 
-    if (!isMatch) {
-      console.log("❌ Password mismatch");
+    if (!isMatch)
       return res.status(401).json({ error: "Invalid email or password" });
-    }
 
-    // Generate token
     const token = generateToken(user._id);
-
     console.log("🎉 LOGIN SUCCESS - Token generated");
 
     res.json({
@@ -102,7 +88,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Get current user
+// ─── GET CURRENT USER ─────────────────────
 router.get("/me", auth, async (req, res) => {
   res.json({
     user: req.user.toSafeJSON(),
