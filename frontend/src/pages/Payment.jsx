@@ -40,6 +40,9 @@ export default function Payment() {
       if (!data.orderId || !data.amount || !data.currency) {
         throw new Error("Invalid order from server");
       }
+      if (!data.keyId) {
+        throw new Error("Razorpay keyId is missing from server response");
+      }
 
       // Convert amount to number, ensure currency is uppercase
       const amount = Number(data.amount);
