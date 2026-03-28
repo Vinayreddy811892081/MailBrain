@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
 
   // ✅ Fetch user
-  const refreshUser = useCallback(async (tok) => {
+  const refreshUser = useCallback(async () => {
     try {
       const res = await authAPI.me();
 
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   // ✅ Init auth on load
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem("md_token"); // ✅ FIXED
+      const storedToken = localStorage.getItem("mb_token"); // ✅ FIXED
 
       if (!storedToken) {
         setLoading(false);
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
         setDaysLeft(res.data.daysLeft ?? 0);
       } catch (err) {
         console.error("Init auth failed:", err);
-        localStorage.removeItem("token"); // ✅ FIXED
+        localStorage.removeItem("mb_token"); // ✅ FIXED
         setToken(null);
       } finally {
         setLoading(false);
