@@ -223,34 +223,72 @@ router.post("/reply/generate", auth, requireSubscription, async (req, res) => {
 });
 
 // Send reply
+// ─── Send reply ─────────────────────────────
 router.post("/reply/send", auth, requireSubscription, async (req, res) => {
   try {
     const { emailId, replyText, subject } = req.body;
+
+    if (!emailId || !replyText) {
+      return res
+        .status(400)
+        .json({ error: "emailId and replyText are required" });
+    }
 
     if (!req.user.emailAccount?.connected) {
       return res.status(400).json({ error: "No email account connected" });
     }
 
+    // Fetch the email from cache
     const email = await EmailCache.findOne({
       _id: emailId,
       userId: req.user._id,
     });
+
     if (!email) return res.status(404).json({ error: "Email not found" });
 
-    await sendEmail(
-      req.user.emailAccount,
-      email.from,
-      `Re: ${subject || email.subject}`,
-      replyText,
-    );
+    // Log for debugging
+    console.log("📨 Sending email to:", email.from);
+    console.log("📨 SMTP config:", req.user.emailAccount);
+    console.log("📨 Subject:", subject || email.subject);
+    console.log("📨 Reply text:", replyText);
+
+    // Safety check for SMTP config
+    const {
+      smtpHost,
+      smtpPort,
+      email: fromEmail,
+      password,
+    } = req.user.emailAccount;
+    if (!smtpHost || !smtpPort || !fromEmail || !password) {
+      return res.status(500).json({
+        error:
+          "SMTP configuration incomplete. Check email connection settings.",
+      });
+    }
+
+    // Send email
+    try {
+      await sendEmail(
+        req.user.emailAccount,
+        email.from,
+        `Re: ${subject || email.subject}`,
+        replyText,
+      );
+    } catch (err) {
+      console.error("❌ sendEmail failed:", err);
+      return res.status(500).json({
+        error: "Failed to send reply. Check SMTP credentials or network.",
+        details: err.message,
+      });
+    }
 
     // Mark as replied
     await EmailCache.updateOne({ _id: emailId }, { isReplied: true });
 
     res.json({ success: true, message: "Reply sent!" });
   } catch (err) {
-    console.error("Send error:", err);
-    res.status(500).json({ error: "Failed to send reply: " + err.message });
+    console.error("🔥 /reply/send error:", err);
+    res.status(500).json({ error: "Unexpected server error" });
   }
 });
 
