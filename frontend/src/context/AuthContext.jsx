@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setSubscriptionActive(false);
     setDaysLeft(0);
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   return (
