@@ -3,7 +3,6 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { auth } = require("../middleware/auth");
-
 const router = express.Router();
 
 const generateToken = (userId) =>
@@ -50,15 +49,47 @@ router.post("/register", async (req, res) => {
 });
 
 // Login
+// 🔐 LOGIN
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email: email?.toLowerCase() });
-    if (!user || !(await user.comparePassword(password))) {
+
+    console.log("📥 LOGIN REQUEST:", req.body);
+
+    if (!email || !password) {
+      console.log("❌ Missing email or password");
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    console.log("👤 USER FOUND:", user ? "YES" : "NO");
+
+    if (!user) {
+      console.log("❌ User not found");
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    // Debug passwords
+    console.log("🔑 Entered Password:", password);
+    console.log("🔐 Stored Hash:", user.password);
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    console.log("✅ Password Match:", isMatch);
+
+    if (!isMatch) {
+      console.log("❌ Password mismatch");
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Generate token
     const token = generateToken(user._id);
+
+    console.log("🎉 LOGIN SUCCESS - Token generated");
+
     res.json({
       token,
       user: user.toSafeJSON(),
@@ -66,6 +97,7 @@ router.post("/login", async (req, res) => {
       daysLeft: user.getDaysLeft(),
     });
   } catch (err) {
+    console.error("🔥 LOGIN ERROR:", err);
     res.status(500).json({ error: "Login failed" });
   }
 });
