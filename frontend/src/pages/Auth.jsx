@@ -18,20 +18,25 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const res = await authAPI.login(form);
+    console.log("LOGIN PAYLOAD:", form); // ✅ BEFORE API CALL
 
-      console.log("LOGIN RESPONSE:", res.data); // ✅ ADD THIS
+    try {
+      const res = await authAPI.login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+
+      console.log("LOGIN RESPONSE:", res.data); // ✅ AFTER API CALL
 
       const success = await login(res.data.token);
 
-      console.log("LOGIN SUCCESS:", success); // ✅ ADD THIS
+      console.log("LOGIN SUCCESS:", success); // ✅ AFTER LOGIN()
 
       if (!success) throw new Error("Login failed");
 
       navigate("/app");
     } catch (err) {
-      console.error("LOGIN ERROR:", err); // ✅ ADD THIS
+      console.error("LOGIN ERROR:", err.response || err); // ✅ ERROR DEBUG
       toast.error(err.response?.data?.error || err.message || "Login failed");
     } finally {
       setLoading(false);
