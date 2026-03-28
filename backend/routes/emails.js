@@ -1,5 +1,6 @@
 // routes/emails.js
 const express = require("express");
+const mongoose = require("mongoose");
 const { auth, requireSubscription } = require("../middleware/auth");
 const {
   detectImapSettings,
