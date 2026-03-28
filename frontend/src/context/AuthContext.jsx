@@ -6,7 +6,6 @@ import {
   useCallback,
 } from "react";
 import { authAPI } from "../services/api";
-import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext(null);
 
@@ -91,7 +90,6 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setSubscriptionActive(false);
     setDaysLeft(0);
-    window.location.replace("/login");
   };
 
   return (
