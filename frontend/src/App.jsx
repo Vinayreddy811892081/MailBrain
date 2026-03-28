@@ -1,4 +1,3 @@
-// App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -10,20 +9,24 @@ import Payment from "./pages/Payment";
 
 // ✅ Only checks login
 function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, subscriptionActive } = useAuth(); // ✅ added subscriptionActive
 
   if (loading) return null;
 
   if (!user) return <Navigate to="/login" replace />;
 
+  if (!subscriptionActive && location.pathname === "/app") {
+    return <Navigate to="/payment" replace />;
+  }
+
   return children;
 }
 
-// ✅ Handles subscription (ONLY for dashboard)
+// ✅ Handles subscription ONLY for dashboard
 function AppRoute({ children }) {
   const { subscriptionActive, loading } = useAuth();
 
-  if (loading) return null;
+  if (loading) return <div>Loading...</div>; // Wait until context finishes loading
 
   if (!subscriptionActive) {
     return <Navigate to="/payment" replace />;
@@ -32,16 +35,12 @@ function AppRoute({ children }) {
   return children;
 }
 
-// ✅ Guest routes (login/register)
+// ✅ Guest routes
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
-
   if (loading) return null;
-
   return user ? <Navigate to="/app" replace /> : children;
 }
-
-// ✅ MAIN APP
 export default function App() {
   return (
     <AuthProvider>
@@ -49,10 +48,8 @@ export default function App() {
         <Toaster position="top-right" />
 
         <Routes>
-          {/* Public */}
           <Route path="/" element={<Landing />} />
 
-          {/* Auth */}
           <Route
             path="/login"
             element={
@@ -71,7 +68,7 @@ export default function App() {
             }
           />
 
-          {/* Dashboard (requires subscription) */}
+          {/* ✅ Dashboard protected by subscription */}
           <Route
             path="/app"
             element={
@@ -83,7 +80,7 @@ export default function App() {
             }
           />
 
-          {/* Payment (only requires login) */}
+          {/* ✅ Payment ONLY needs login */}
           <Route
             path="/payment"
             element={
@@ -93,7 +90,6 @@ export default function App() {
             }
           />
 
-          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
