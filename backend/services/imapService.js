@@ -214,7 +214,7 @@ const sendEmail = async (emailConfig, to, subject, text, html) => {
   });
   console.log("SMTP CONFIG:", {
     host: emailConfig.smtpHost,
-    port: emailConfig.smtpPort,
+    port: 465, // ✅ FORCE CORRECT VALUE
     user: emailConfig.email,
   });
   try {
