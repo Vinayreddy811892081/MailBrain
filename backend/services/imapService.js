@@ -10,55 +10,55 @@ const detectImapSettings = (email) => {
       host: "imap.gmail.com",
       port: 993,
       smtpHost: "smtp.gmail.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "googlemail.com": {
       host: "imap.gmail.com",
       port: 993,
       smtpHost: "smtp.gmail.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "outlook.com": {
       host: "outlook.office365.com",
       port: 993,
       smtpHost: "smtp.office365.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "hotmail.com": {
       host: "outlook.office365.com",
       port: 993,
       smtpHost: "smtp.office365.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "live.com": {
       host: "outlook.office365.com",
       port: 993,
       smtpHost: "smtp.office365.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "yahoo.com": {
       host: "imap.mail.yahoo.com",
       port: 993,
       smtpHost: "smtp.mail.yahoo.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "yahoo.in": {
       host: "imap.mail.yahoo.com",
       port: 993,
       smtpHost: "smtp.mail.yahoo.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "icloud.com": {
       host: "imap.mail.me.com",
       port: 993,
       smtpHost: "smtp.mail.me.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "me.com": {
       host: "imap.mail.me.com",
       port: 993,
       smtpHost: "smtp.mail.me.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "protonmail.com": {
       host: "127.0.0.1",
@@ -70,13 +70,13 @@ const detectImapSettings = (email) => {
       host: "imap.zoho.in",
       port: 993,
       smtpHost: "smtp.zoho.in",
-      smtpPort: 587,
+      smtpPort: 465,
     },
     "rediffmail.com": {
       host: "imap.rediffmail.com",
       port: 993,
       smtpHost: "smtp.rediffmail.com",
-      smtpPort: 587,
+      smtpPort: 465,
     },
   };
   return (
@@ -84,7 +84,7 @@ const detectImapSettings = (email) => {
       host: `imap.${domain}`,
       port: 993,
       smtpHost: `smtp.${domain}`,
-      smtpPort: 587,
+      smtpPort: 465,
     }
   );
 };
@@ -188,24 +188,47 @@ const fetchRecentEmails = (emailConfig, limit = 30) => {
   });
 };
 
-// Send email via SMTP (nodemailer)
 const sendEmail = async (emailConfig, to, subject, text, html) => {
   const nodemailer = require("nodemailer");
+
   const transporter = nodemailer.createTransport({
     host: emailConfig.smtpHost,
-    port: emailConfig.smtpPort || 587,
-    secure: false,
-    auth: { user: emailConfig.email, pass: emailConfig.password },
-    tls: { rejectUnauthorized: false },
-  });
 
-  await transporter.sendMail({
-    from: `"${emailConfig.name || "Me"}" <${emailConfig.email}>`,
-    to,
-    subject,
-    text,
-    html: html || `<p>${text}</p>`,
+    // ✅ FIX: use SSL port
+    port: 465,
+    secure: true,
+
+    auth: {
+      user: emailConfig.email,
+      pass: emailConfig.password,
+    },
+
+    // ✅ IMPORTANT for Render (timeouts)
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
+
+    tls: {
+      rejectUnauthorized: false,
+    },
   });
+  console.log("SMTP CONFIG:", {
+    host: emailConfig.smtpHost,
+    port: emailConfig.smtpPort,
+    user: emailConfig.email,
+  });
+  try {
+    await transporter.sendMail({
+      from: `"MailBrain" <${emailConfig.email}>`,
+      to,
+      subject,
+      text,
+      html: html || `<p>${text}</p>`,
+    });
+  } catch (err) {
+    console.error("SEND ERROR:", err);
+    throw err;
+  }
 };
 
 module.exports = {
