@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X, Eye, EyeOff, Shield } from "lucide-react";
 import { emailAPI } from "../services/api";
 import toast from "react-hot-toast";
@@ -13,26 +13,6 @@ export default function ConnectModal({ onClose, onConnected }) {
   const [loading, setLoading] = useState(false);
   const [showManual, setShowManual] = useState(false);
 
-  // ✅ if redirected back after gmail connect
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const gmailConnected = params.get("gmail_connected");
-
-    if (gmailConnected === "1") {
-      toast.success("Gmail connected successfully");
-      onConnected();
-
-      // clean URL
-      window.history.replaceState({}, document.title, "/app");
-    } else if (gmailConnected === "0") {
-      toast.error("Gmail connection failed");
-
-      // clean URL
-      window.history.replaceState({}, document.title, "/app");
-    }
-  }, [onConnected]);
-
-  // ✅ GOOGLE CONNECT
   const handleGoogleConnect = () => {
     const token = localStorage.getItem("mb_token");
 
@@ -44,7 +24,6 @@ export default function ConnectModal({ onClose, onConnected }) {
     window.location.href = `${BACKEND_URL}/api/auth/google?token=${token}`;
   };
 
-  // ✅ IMAP FALLBACK
   const handleConnect = async (e) => {
     e.preventDefault();
 
@@ -75,7 +54,6 @@ export default function ConnectModal({ onClose, onConnected }) {
           </button>
         </div>
 
-        {/* ✅ GOOGLE CONNECT */}
         <button
           className="btn btn-primary"
           style={{
@@ -93,7 +71,6 @@ export default function ConnectModal({ onClose, onConnected }) {
           Connect your Gmail securely with Google
         </p>
 
-        {/* ✅ manual toggle */}
         <div style={{ textAlign: "center", margin: "10px 0" }}>
           <button
             type="button"
@@ -104,7 +81,6 @@ export default function ConnectModal({ onClose, onConnected }) {
           </button>
         </div>
 
-        {/* ✅ manual IMAP fallback */}
         {showManual && (
           <>
             <div className="connect-privacy">
