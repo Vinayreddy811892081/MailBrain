@@ -169,7 +169,17 @@ router.get("/google/callback", async (req, res) => {
     res.redirect(`${frontendUrl}/app?gmail_connected=1`);
   } catch (err) {
     console.error("Google auth error:", err);
-    res.redirect(`${process.env.FRONTEND_URL}/app?gmail_connected=0`);
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+    // if user already has google connected, don't treat it as a hard failure
+    try {
+      const existingUser = state ? await User.findById(state) : null;
+      if (existingUser?.google?.email) {
+        return res.redirect(`${frontendUrl}/app?gmail_connected=1`);
+      }
+    } catch {}
+
+    res.redirect(`${frontendUrl}/app?gmail_connected=0`);
   }
 });
 
