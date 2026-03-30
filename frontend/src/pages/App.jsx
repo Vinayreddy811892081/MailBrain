@@ -5,10 +5,8 @@ import {
   Brain,
   RefreshCw,
   LogOut,
-  Settings,
   Mail,
   X,
-  Send,
   Sparkles,
   ChevronRight,
   AlertCircle,
@@ -33,12 +31,12 @@ const CATEGORIES = [
 ];
 
 export default function AppPage() {
-  const { user, logout, subscriptionActive, daysLeft } = useAuth();
+  const { user, logout, subscriptionActive, daysLeft, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const [emails, setEmails] = useState([]);
   const [counts, setCounts] = useState({});
-  const [selectedCategory, setSelectedCategory] = useState("urgent");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
@@ -46,31 +44,53 @@ export default function AppPage() {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (user?.emailAccount?.connected) {
-      setConnected(true);
+    const params = new URLSearchParams(window.location.search);
+    const gmailConnected = params.get("gmail_connected");
+
+    if (gmailConnected === "1") {
+      refreshUser();
+      toast.success("Gmail connected successfully");
+      window.history.replaceState({}, document.title, "/app");
+    } else if (gmailConnected === "0") {
+      toast.error("Gmail connection failed");
+      window.history.replaceState({}, document.title, "/app");
     }
-  }, [user]);
+  }, [refreshUser]);
 
   useEffect(() => {
-    if (connected) {
-      fetchEmails();
-      fetchCounts();
+    const imapConnected = !!user?.emailAccount?.connected;
+    const googleConnected = !!user?.google?.email;
+
+    setConnected(imapConnected || googleConnected);
+  }, [user]);
+
+  const fetchCounts = useCallback(async () => {
+    try {
+      const res = await emailAPI.categories();
+      setCounts(res.data || {});
+    } catch (err) {
+      console.log("CATEGORY FETCH ERROR:", err.response?.data || err.message);
     }
-  }, [connected, selectedCategory]);
+  }, []);
 
   const fetchEmails = useCallback(
     async (refresh = false) => {
       setLoading(true);
+
       try {
         const res = await emailAPI.fetch({
           category: selectedCategory === "all" ? undefined : selectedCategory,
           refresh: refresh ? "1" : undefined,
         });
-        console.log("EMAIL API RESPONSE:", res.data); // 👈 ADD THIS
+
         setEmails(res.data.emails || []);
-        if (!res.data.fromCache || refresh) fetchCounts();
+
+        if (!res.data.fromCache || refresh) {
+          fetchCounts();
+        }
       } catch (err) {
-        console.log("EMAIL API RESPONSE:", res.data); // 👈 ADD THIS
+        console.log("EMAIL FETCH ERROR:", err.response?.data || err.message);
+
         if (err.response?.data?.code === "NOT_CONNECTED") {
           setConnected(false);
         } else {
@@ -80,22 +100,23 @@ export default function AppPage() {
         setLoading(false);
       }
     },
-    [selectedCategory],
+    [selectedCategory, fetchCounts],
   );
 
-  const fetchCounts = async () => {
-    try {
-      const res = await emailAPI.categories();
-      setCounts(res.data);
-    } catch {}
-  };
+  useEffect(() => {
+    if (connected) {
+      fetchEmails();
+      fetchCounts();
+    }
+  }, [connected, selectedCategory, fetchEmails, fetchCounts]);
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
-  const handleConnected = () => {
+  const handleConnected = async () => {
+    await refreshUser();
     setConnected(true);
     setShowConnect(false);
     toast.success("Email connected! Analyzing your inbox...");
@@ -105,14 +126,18 @@ export default function AppPage() {
   const handleDisconnect = async () => {
     try {
       await emailAPI.disconnect();
+      await refreshUser(); // ✅ important
+
       setConnected(false);
       setEmails([]);
       setCounts({});
       setSelectedEmail(null);
+
       toast.success("Email disconnected. All cached data deleted.");
     } catch {
       toast.error("Disconnect failed");
     }
+
     setShowSettings(false);
   };
 
@@ -127,7 +152,6 @@ export default function AppPage() {
 
   return (
     <div className="app-layout">
-      {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">
           <Brain size={22} color="#6c63ff" />
@@ -179,6 +203,7 @@ export default function AppPage() {
             )}
             <ChevronRight size={14} className="chevron" />
           </div>
+
           <div className="sidebar-user">
             <div className="user-avatar">{user?.name?.[0]?.toUpperCase()}</div>
             <div className="user-info">
@@ -192,7 +217,6 @@ export default function AppPage() {
         </div>
       </aside>
 
-      {/* Email list */}
       <main className="email-list-panel">
         <div className="panel-header">
           <div>
@@ -202,6 +226,7 @@ export default function AppPage() {
               {filteredEmails.length !== 1 ? "s" : ""}
             </p>
           </div>
+
           <div className="panel-actions">
             {connected && (
               <button
@@ -213,6 +238,7 @@ export default function AppPage() {
                 <RefreshCw size={16} className={loading ? "spin" : ""} />
               </button>
             )}
+
             {!connected && (
               <button
                 className="btn btn-primary"
@@ -229,7 +255,7 @@ export default function AppPage() {
             <Mail size={48} color="#3a3a45" />
             <h3>Connect your email</h3>
             <p>
-              Link your Gmail, Outlook, or any email via IMAP to get started.
+              Connect Gmail instantly or use manual IMAP for other providers.
             </p>
             <button
               className="btn btn-primary"
@@ -270,7 +296,6 @@ export default function AppPage() {
         </div>
       </main>
 
-      {/* Email detail panel */}
       <section className="detail-panel">
         {selectedEmail ? (
           <EmailDetail
@@ -289,13 +314,13 @@ export default function AppPage() {
         )}
       </section>
 
-      {/* Modals */}
       {showConnect && (
         <ConnectModal
           onClose={() => setShowConnect(false)}
           onConnected={handleConnected}
         />
       )}
+
       {showSettings && (
         <SettingsModal
           user={user}
@@ -363,6 +388,7 @@ function SettingsModal({
             <X size={18} />
           </button>
         </div>
+
         <div className="settings-section">
           <h4>Account</h4>
           <div className="settings-row">
@@ -374,6 +400,7 @@ function SettingsModal({
             <span>{user?.email}</span>
           </div>
         </div>
+
         <div className="settings-section">
           <h4>Subscription</h4>
           <div className="settings-row">
@@ -384,6 +411,7 @@ function SettingsModal({
                 : "Expired"}
             </span>
           </div>
+
           {!subscriptionActive || daysLeft <= 5 ? (
             <button
               className="btn btn-primary"
@@ -396,6 +424,7 @@ function SettingsModal({
             </button>
           ) : null}
         </div>
+
         <div className="settings-section">
           <h4>Email Connection</h4>
           <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>

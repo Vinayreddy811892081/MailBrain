@@ -188,36 +188,82 @@ const fetchRecentEmails = (emailConfig, limit = 30) => {
   });
 };
 
-const sendEmail = async (emailConfig, to, subject, text, html) => {
-  const nodemailer = require("nodemailer");
-
-  const transporter = nodemailer.createTransport({
-    host: emailConfig.smtpHost,
-
-    // ✅ FIX: use SSL port
-    port: 465,
-    secure: true,
-
-    auth: {
-      user: emailConfig.email,
-      pass: emailConfig.password,
-    },
-
-    // ✅ IMPORTANT for Render (timeouts)
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 20000,
-
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
-  console.log("SMTP CONFIG:", {
-    host: emailConfig.smtpHost,
-    port: 465, // ✅ FORCE CORRECT VALUE
-    user: emailConfig.email,
-  });
+const sendEmail = async (emailConfig, to, subject, text, html, user = null) => {
   try {
+    // ✅ 1. GOOGLE OAUTH (if available)
+    if (user?.google?.accessToken) {
+      console.log("📨 Sending via Gmail API");
+
+      const { google } = require("googleapis");
+
+      const oAuth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+      );
+
+      oAuth2Client.setCredentials({
+        access_token: user.google.accessToken,
+        refresh_token: user.google.refreshToken,
+      });
+
+      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
+      const message = [
+        `From: ${emailConfig.email}`,
+        `To: ${to}`,
+        `Subject: ${subject}`,
+        "Content-Type: text/html; charset=utf-8",
+        "",
+        html || `<p>${text}</p>`,
+      ].join("\n");
+
+      const encodedMessage = Buffer.from(message)
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_");
+
+      await gmail.users.messages.send({
+        userId: "me",
+        requestBody: {
+          raw: encodedMessage,
+        },
+      });
+
+      return;
+    }
+
+    // ✅ 2. FALLBACK → SMTP (IMAP users)
+    console.log("📨 Sending via SMTP");
+
+    const nodemailer = require("nodemailer");
+
+    const transporter = nodemailer.createTransport({
+      host: emailConfig.smtpHost,
+
+      // 🔥 FIX: try TLS port first (Render friendly)
+      port: 587,
+      secure: false,
+
+      auth: {
+        user: emailConfig.email,
+        pass: emailConfig.password,
+      },
+
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      socketTimeout: 30000,
+
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+
+    console.log("SMTP CONFIG:", {
+      host: emailConfig.smtpHost,
+      port: 587,
+      user: emailConfig.email,
+    });
+
     await transporter.sendMail({
       from: `"MailBrain" <${emailConfig.email}>`,
       to,
@@ -227,6 +273,35 @@ const sendEmail = async (emailConfig, to, subject, text, html) => {
     });
   } catch (err) {
     console.error("SEND ERROR:", err);
+
+    // 🔥 FINAL FALLBACK → try SSL port if TLS fails
+    if (err.code === "ETIMEDOUT" || err.code === "ECONNECTION") {
+      console.log("🔁 Retrying with SSL port 465...");
+
+      const nodemailer = require("nodemailer");
+
+      const transporter = nodemailer.createTransport({
+        host: emailConfig.smtpHost,
+        port: 465,
+        secure: true,
+        auth: {
+          user: emailConfig.email,
+          pass: emailConfig.password,
+        },
+        tls: { rejectUnauthorized: false },
+      });
+
+      await transporter.sendMail({
+        from: `"MailBrain" <${emailConfig.email}>`,
+        to,
+        subject,
+        text,
+        html: html || `<p>${text}</p>`,
+      });
+
+      return;
+    }
+
     throw err;
   }
 };

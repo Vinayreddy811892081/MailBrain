@@ -7,40 +7,34 @@ import { LoginPage, RegisterPage } from "./pages/Auth";
 import AppPage from "./pages/App";
 import Payment from "./pages/Payment";
 
-// ✅ Only checks login
+// Only checks login
 function PrivateRoute({ children }) {
-  const { user, loading, subscriptionActive } = useAuth(); // ✅ added subscriptionActive
+  const { user, loading } = useAuth();
 
   if (loading) return null;
-
   if (!user) return <Navigate to="/login" replace />;
-
-  if (!subscriptionActive && location.pathname === "/app") {
-    return <Navigate to="/payment" replace />;
-  }
 
   return children;
 }
 
-// ✅ Handles subscription ONLY for dashboard
+// Only checks subscription for dashboard
 function AppRoute({ children }) {
   const { subscriptionActive, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>; // Wait until context finishes loading
-
-  if (!subscriptionActive) {
-    return <Navigate to="/payment" replace />;
-  }
+  if (loading) return null;
+  if (!subscriptionActive) return <Navigate to="/payment" replace />;
 
   return children;
 }
 
-// ✅ Guest routes
+// Guest-only routes
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
+
   if (loading) return null;
   return user ? <Navigate to="/app" replace /> : children;
 }
+
 export default function App() {
   return (
     <AuthProvider>
@@ -68,7 +62,6 @@ export default function App() {
             }
           />
 
-          {/* ✅ Dashboard protected by subscription */}
           <Route
             path="/app"
             element={
@@ -80,7 +73,6 @@ export default function App() {
             }
           />
 
-          {/* ✅ Payment ONLY needs login */}
           <Route
             path="/payment"
             element={

@@ -6,7 +6,6 @@ import {
   useCallback,
 } from "react";
 import { authAPI } from "../services/api";
-import { useNavigate } from "react-router-dom";
 
 const AuthContext = createContext(null);
 
@@ -15,9 +14,17 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [daysLeft, setDaysLeft] = useState(0);
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("mb_token") || null);
 
-  // ✅ Fetch user
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem("mb_token");
+    setToken(null);
+    setUser(null);
+    setSubscriptionActive(false);
+    setDaysLeft(0);
+  }, []);
+
+  // ✅ Fetch latest user
   const refreshUser = useCallback(async () => {
     try {
       const res = await authAPI.me();
@@ -29,15 +36,15 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (err) {
       console.error("Auth fetch failed:", err);
-      logout();
+      clearAuth();
       return false;
     }
-  }, []);
+  }, [clearAuth]);
 
-  // ✅ Init auth on load
+  // ✅ Init auth on app load
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem("mb_token"); // ✅ FIXED
+      const storedToken = localStorage.getItem("mb_token");
 
       if (!storedToken) {
         setLoading(false);
@@ -54,23 +61,20 @@ export const AuthProvider = ({ children }) => {
         setDaysLeft(res.data.daysLeft ?? 0);
       } catch (err) {
         console.error("Init auth failed:", err);
-        localStorage.removeItem("mb_token"); // ✅ FIXED
-        setToken(null);
+        clearAuth();
       } finally {
         setLoading(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [clearAuth]);
 
-  // ✅ LOGIN FIXED
-  const login = async (token) => {
+  // ✅ Login with JWT from backend
+  const login = async (newToken) => {
     try {
-      // ✅ MUST match api.js
-      localStorage.setItem("mb_token", token);
-
-      setToken(token);
+      localStorage.setItem("mb_token", newToken);
+      setToken(newToken);
 
       const res = await authAPI.me();
 
@@ -81,18 +85,16 @@ export const AuthProvider = ({ children }) => {
       return true;
     } catch (err) {
       console.error("LOGIN FAILED:", err);
+      clearAuth();
       return false;
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("mb_token");
-    setToken(null);
-    setUser(null);
-    setSubscriptionActive(false);
-    setDaysLeft(0);
-    window.location.href = "/";
-  };
+  // ✅ Logout only clears auth
+  // Navigation should be handled in components
+  const logout = useCallback(() => {
+    clearAuth();
+  }, [clearAuth]);
 
   return (
     <AuthContext.Provider

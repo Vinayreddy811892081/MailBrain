@@ -4,30 +4,43 @@ const cors = require("cors");
 const express = require("express");
 const mongoose = require("mongoose");
 const cron = require("node-cron");
+
 const app = express();
 
+// ─── Disable caching ─────────────────────
 app.use((req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 });
-// ─── Middleware ───────────────────────────────────────────────
+
+// ─── CORS (FIXED) ───────────────────────
+const allowedOrigins = [
+  "https://mail-brain-sepia.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: [
-      "https://mail-brain-sepia.vercel.app",
-      "http://localhost:5173",
-      "http://localhost:3000",
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.warn("❌ Blocked by CORS:", origin);
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
 
-// Raw body for Razorpay webhook
+// ─── Body Parsers ───────────────────────
 app.use("/api/payment/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logger (development only)
+// ─── Logger (dev only) ──────────────────
 if (process.env.NODE_ENV !== "production") {
   app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`);
@@ -35,12 +48,16 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// ─── Routes ──────────────────────────────────────────────────
+// ─── ROUTES ─────────────────────────────
+
+// ✅ ADD THIS (Gmail OAuth routes)
 app.use("/api/auth", require("./routes/auth"));
+
+// Existing routes
 app.use("/api/emails", require("./routes/emails"));
 app.use("/api/payment", require("./routes/payment"));
 
-// Health check
+// ─── Health Check ───────────────────────
 app.get("/health", (req, res) =>
   res.json({
     status: "ok",
@@ -49,16 +66,21 @@ app.get("/health", (req, res) =>
   }),
 );
 
-// 404 handler
-app.use((req, res) => res.status(404).json({ error: "Route not found" }));
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error("Server error:", err);
-  res.status(500).json({ error: "Internal server error" });
+// Root
+app.get("/", (req, res) => {
+  res.send("🚀 MailBrain API is running");
 });
 
-// ─── Database ─────────────────────────────────────────────────
+// ─── 404 ────────────────────────────────
+app.use((req, res) => res.status(404).json({ error: "Route not found" }));
+
+// ─── Error Handler ──────────────────────
+app.use((err, req, res, next) => {
+  console.error("🔥 Server error:", err.message);
+  res.status(500).json({ error: err.message || "Internal server error" });
+});
+
+// ─── Database ───────────────────────────
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
@@ -67,19 +89,17 @@ mongoose
     process.exit(1);
   });
 
-// ─── Cron: Expire trials & subscriptions daily ────────────────
+// ─── Cron Job ───────────────────────────
 cron.schedule("0 0 * * *", async () => {
   try {
     const User = require("./models/User");
     const now = new Date();
 
-    // Expire trials
     await User.updateMany(
       { subscriptionStatus: "trial", trialEnds: { $lt: now } },
       { subscriptionStatus: "expired" },
     );
 
-    // Expire paid subscriptions
     await User.updateMany(
       { subscriptionStatus: "active", subscriptionEnds: { $lt: now } },
       { subscriptionStatus: "expired" },
@@ -91,14 +111,11 @@ cron.schedule("0 0 * * *", async () => {
   }
 });
 
-// ─── Start ────────────────────────────────────────────────────
+// ─── Start Server ───────────────────────
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`\n🧠 MailBrain Backend running on port ${PORT}`);
-  console.log(`📧 IMAP-based email - no Gmail API required`);
+  console.log(`📧 IMAP + Gmail API ready`);
   console.log(`🔒 Privacy: raw emails never stored\n`);
-});
-
-app.get("/", (req, res) => {
-  res.send("🚀 MailBrain API is running");
 });

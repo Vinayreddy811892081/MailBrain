@@ -1,6 +1,6 @@
-// routes/emails.js
 const express = require("express");
 const mongoose = require("mongoose");
+const { google } = require("googleapis");
 const { auth, requireSubscription } = require("../middleware/auth");
 const {
   detectImapSettings,
@@ -8,22 +8,53 @@ const {
   fetchRecentEmails,
   sendEmail,
 } = require("../services/imapService");
-const {
-  analyzeEmail,
-  generateReply,
-  batchAnalyzeEmails,
-} = require("../services/aiService");
+const { generateReply, batchAnalyzeEmails } = require("../services/aiService");
 const EmailCache = require("../models/EmailCache");
-const User = require("../models/User");
 
 const router = express.Router();
+
+const sendEmailWithGmail = async (user, to, subject, text) => {
+  const oAuth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI,
+  );
+
+  oAuth2Client.setCredentials({
+    refresh_token: user.google.refreshToken,
+    access_token: user.google.accessToken,
+  });
+
+  const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
+  const message = [
+    `From: ${user.google.email}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    text,
+  ].join("\n");
+
+  const encodedMessage = Buffer.from(message)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  await gmail.users.messages.send({
+    userId: "me",
+    requestBody: { raw: encodedMessage },
+  });
+};
 
 // Connect email account
 router.post("/connect", auth, requireSubscription, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ error: "Email and password required" });
+    }
 
     const imapSettings = detectImapSettings(email);
     const config = {
@@ -34,21 +65,19 @@ router.post("/connect", auth, requireSubscription, async (req, res) => {
       smtpHost: imapSettings.smtpHost,
       smtpPort: imapSettings.smtpPort,
     };
-    //console.log("FINAL CONFIG:", config);
 
-    // Test connection first
     await testConnection(config);
 
-    // Save encrypted config (password stored for IMAP auth only)
     req.user.emailAccount = {
       email,
-      password, // stored for IMAP - user chose to connect
+      password,
       imapHost: imapSettings.host,
       imapPort: imapSettings.port,
       smtpHost: imapSettings.smtpHost,
       smtpPort: imapSettings.smtpPort,
       connected: true,
     };
+
     await req.user.save();
 
     res.json({
@@ -66,7 +95,7 @@ router.post("/connect", auth, requireSubscription, async (req, res) => {
       errorMsg = "Wrong email or password. For Gmail, use an App Password.";
     }
 
-    if (err.message?.includes("timeout")) {
+    if (err.message?.toLowerCase().includes("timeout")) {
       errorMsg = "Connection timed out. Check your IMAP settings.";
     }
 
@@ -81,9 +110,15 @@ router.post("/connect", auth, requireSubscription, async (req, res) => {
 router.post("/disconnect", auth, async (req, res) => {
   try {
     req.user.emailAccount = { connected: false };
+    req.user.google = {
+      email: "",
+      refreshToken: "",
+      accessToken: "",
+    };
+
     await req.user.save();
-    // Delete all cached summaries for this user
     await EmailCache.deleteMany({ userId: req.user._id });
+
     res.json({
       success: true,
       message: "Email disconnected and all cached data deleted",
@@ -93,18 +128,23 @@ router.post("/disconnect", auth, async (req, res) => {
   }
 });
 
-// Fetch & analyze emails (main endpoint)
+// Fetch & analyze emails
 router.get("/fetch", auth, requireSubscription, async (req, res) => {
   try {
     const { category, refresh } = req.query;
 
-    if (!req.user.emailAccount?.connected) {
-      return res
-        .status(400)
-        .json({ error: "No email account connected", code: "NOT_CONNECTED" });
+    const isGoogleConnected =
+      !!req.user.google?.refreshToken || !!req.user.google?.accessToken;
+    const isImapConnected = !!req.user.emailAccount?.connected;
+
+    // ✅ FIX: allow either Google OR IMAP
+    if (!isImapConnected && !isGoogleConnected) {
+      return res.status(400).json({
+        error: "No email connected",
+        code: "NOT_CONNECTED",
+      });
     }
 
-    // Return cached if available and not forcing refresh
     if (!refresh) {
       const query = { userId: req.user._id };
       if (category && category !== "all") query.category = category;
@@ -119,16 +159,91 @@ router.get("/fetch", auth, requireSubscription, async (req, res) => {
       }
     }
 
-    // Clear old cache for this user
     await EmailCache.deleteMany({ userId: req.user._id });
 
-    // Fetch live from IMAP (raw emails NOT stored)
-    const rawEmails = await fetchRecentEmails(req.user.emailAccount, 10);
+    let rawEmails = [];
 
-    // AI analyze all emails
+    if (isGoogleConnected) {
+      console.log("📩 Fetching from Gmail API");
+
+      const oAuth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI,
+      );
+
+      oAuth2Client.setCredentials({
+        access_token: req.user.google.accessToken,
+        refresh_token: req.user.google.refreshToken,
+      });
+
+      const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
+      const resGmail = await gmail.users.messages.list({
+        userId: "me",
+        maxResults: 10,
+        labelIds: ["INBOX"], // ✅ only inbox
+        q: "-from:me", // ✅ exclude sent-by-you messages
+      });
+
+      const messages = resGmail.data.messages || [];
+
+      for (const msg of messages) {
+        const full = await gmail.users.messages.get({
+          userId: "me",
+          id: msg.id,
+          format: "full",
+        });
+
+        const headers = full.data.payload?.headers || [];
+        const parts = full.data.payload?.parts || [];
+
+        const getHeader = (name) =>
+          headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
+            ?.value || "";
+
+        let bodyText = "";
+
+        if (full.data.payload?.body?.data) {
+          bodyText = Buffer.from(
+            full.data.payload.body.data.replace(/-/g, "+").replace(/_/g, "/"),
+            "base64",
+          ).toString("utf8");
+        } else {
+          const textPart = parts.find((p) => p.mimeType === "text/plain");
+          if (textPart?.body?.data) {
+            bodyText = Buffer.from(
+              textPart.body.data.replace(/-/g, "+").replace(/_/g, "/"),
+              "base64",
+            ).toString("utf8");
+          }
+        }
+
+        const fromHeader = getHeader("From");
+        const subjectHeader = getHeader("Subject") || "(no subject)";
+
+        const emailMatch = fromHeader.match(/<(.+?)>/);
+        const nameMatch = fromHeader
+          .replace(/<(.+?)>/, "")
+          .replace(/"/g, "")
+          .trim();
+
+        rawEmails.push({
+          messageId: msg.id,
+          from: emailMatch ? emailMatch[1] : fromHeader,
+          fromName: nameMatch || (emailMatch ? emailMatch[1] : fromHeader),
+          subject: subjectHeader,
+          bodyText: (bodyText || "").substring(0, 2000),
+          receivedAt: new Date(parseInt(full.data.internalDate, 10)),
+        });
+      }
+    } else {
+      console.log("📩 Fetching from IMAP");
+      rawEmails = await fetchRecentEmails(req.user.emailAccount, 10);
+    }
+
     const analyses = await batchAnalyzeEmails(rawEmails);
 
-    // Store only AI summaries (not raw email content)
     const toSave = rawEmails.map((email, i) => {
       const ai = analyses[i] || {};
 
@@ -139,27 +254,20 @@ router.get("/fetch", auth, requireSubscription, async (req, res) => {
         fromName: email.fromName,
         subject: email.subject,
         receivedAt: email.receivedAt,
-
-        // ✅ SAFE ACCESS (no crash)
         aiSummary: ai.summary || email.subject || "No summary",
         whatTheyWant: ai.whatTheyWant || "Check email",
         suggestedReplies: ai.suggestedReplies || ["OK", "Thanks"],
         category: ai.category || "noise",
       };
     });
-    // Bulk insert
-    await EmailCache.insertMany(toSave, { ordered: false }).catch(() => {});
 
-    // Filter by category if requested
-    const filtered =
-      category && category !== "all"
-        ? toSave.filter((e) => e.category === category)
-        : toSave;
+    await EmailCache.insertMany(toSave, { ordered: false }).catch(() => {});
 
     const savedEmails = await EmailCache.find({ userId: req.user._id })
       .sort({ receivedAt: -1 })
       .limit(50)
       .lean();
+
     res.json({
       emails: savedEmails,
       fromCache: false,
@@ -187,6 +295,7 @@ router.get("/categories", auth, requireSubscription, async (req, res) => {
       unreplied: 0,
       noise: 0,
     };
+
     counts.forEach((c) => {
       result[c._id] = c.count;
     });
@@ -201,11 +310,15 @@ router.get("/categories", auth, requireSubscription, async (req, res) => {
 router.post("/reply/generate", auth, requireSubscription, async (req, res) => {
   try {
     const { emailId, instruction } = req.body;
+
     const email = await EmailCache.findOne({
       _id: emailId,
       userId: req.user._id,
     });
-    if (!email) return res.status(404).json({ error: "Email not found" });
+
+    if (!email) {
+      return res.status(404).json({ error: "Email not found" });
+    }
 
     const reply = await generateReply(
       {
@@ -227,24 +340,41 @@ router.post("/reply/send", auth, requireSubscription, async (req, res) => {
   try {
     const { emailId, replyText, subject } = req.body;
 
-    if (!req.user.emailAccount?.connected) {
-      return res.status(400).json({ error: "No email account connected" });
+    const isGoogleConnected =
+      !!req.user.google?.refreshToken || !!req.user.google?.accessToken;
+    const isImapConnected = !!req.user.emailAccount?.connected;
+
+    if (!isImapConnected && !isGoogleConnected) {
+      return res.status(400).json({
+        error: "No email connected. Connect IMAP or Google account.",
+      });
     }
 
     const email = await EmailCache.findOne({
       _id: emailId,
       userId: req.user._id,
     });
-    if (!email) return res.status(404).json({ error: "Email not found" });
 
-    await sendEmail(
-      req.user.emailAccount,
-      email.from,
-      `Re: ${subject || email.subject}`,
-      replyText,
-    );
+    if (!email) {
+      return res.status(404).json({ error: "Email not found" });
+    }
 
-    // Mark as replied
+    if (isGoogleConnected) {
+      await sendEmailWithGmail(
+        req.user,
+        email.from,
+        `Re: ${subject || email.subject}`,
+        replyText,
+      );
+    } else {
+      await sendEmail(
+        req.user.emailAccount,
+        email.from,
+        `Re: ${subject || email.subject}`,
+        replyText,
+      );
+    }
+
     await EmailCache.updateOne({ _id: emailId }, { isReplied: true });
 
     res.json({ success: true, message: "Reply sent!" });
@@ -259,7 +389,6 @@ router.patch("/:id/read", auth, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ PREVENT CRASH
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid email ID" });
     }

@@ -18,38 +18,42 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    console.log("LOGIN PAYLOAD:", form); // ✅ BEFORE API CALL
-
     try {
       const res = await authAPI.login({
         email: form.email.trim().toLowerCase(),
         password: form.password,
       });
 
-      console.log("LOGIN RESPONSE:", res.data); // ✅ AFTER API CALL
-
       const success = await login(res.data.token);
-
-      console.log("LOGIN SUCCESS:", success); // ✅ AFTER LOGIN()
 
       if (!success) throw new Error("Login failed");
 
       navigate("/app");
     } catch (err) {
-      console.error("LOGIN ERROR:", err.response || err); // ✅ ERROR DEBUG
-      toast.error(err.response?.data?.error || err.message || "Login failed");
+      console.error("LOGIN ERROR:", err);
+
+      // ✅ Better error handling
+      if (err.code === "ERR_NETWORK") {
+        toast.error("Server not reachable. Check backend URL.");
+      } else {
+        toast.error(err.response?.data?.error || err.message || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <div className="auth-page">
       <div className="auth-card fade-in">
         <Link to="/" className="auth-brand">
           <Brain size={22} color="#6c63ff" /> MailBrain
         </Link>
+
         <h2>Welcome back</h2>
         <p className="auth-sub">Sign in to your account</p>
+
+        {/* ✅ LOGIN FORM */}
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="field">
             <label>Email</label>
@@ -64,6 +68,7 @@ export function LoginPage() {
               required
             />
           </div>
+
           <div className="field">
             <label>Password</label>
             <div className="pass-wrap">
@@ -86,6 +91,7 @@ export function LoginPage() {
               </button>
             </div>
           </div>
+
           <button
             type="submit"
             className="btn btn-primary auth-submit"
@@ -100,6 +106,9 @@ export function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* ✅ NEW: GOOGLE CONNECT BUTTON */}
+
         <p className="auth-switch">
           No account? <Link to="/register">Start free trial</Link>
         </p>
@@ -107,6 +116,8 @@ export function LoginPage() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────
 
 export function RegisterPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -117,27 +128,35 @@ export function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (form.password.length < 8) {
       toast.error("Password must be 8+ characters");
       return;
     }
+
     setLoading(true);
 
     try {
       const res = await authAPI.register(form);
 
-      // ✅ Only pass token to login
       const success = await login(res.data.token);
-      if (!success) throw new Error("Failed to fetch user after registration");
+      if (!success) throw new Error("Failed to fetch user");
 
       toast.success(
         `Welcome to MailBrain! ${res.data.trialDays || 5} days free 🎉`,
       );
+
       navigate("/app");
     } catch (err) {
-      toast.error(
-        err.response?.data?.error || err.message || "Registration failed",
-      );
+      console.error("REGISTER ERROR:", err);
+
+      if (err.code === "ERR_NETWORK") {
+        toast.error("Server not reachable");
+      } else {
+        toast.error(
+          err.response?.data?.error || err.message || "Registration failed",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -149,8 +168,10 @@ export function RegisterPage() {
         <Link to="/" className="auth-brand">
           <Brain size={22} color="#6c63ff" /> MailBrain
         </Link>
+
         <h2>Start your free trial</h2>
         <p className="auth-sub">5 days free · No credit card needed</p>
+
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="field">
             <label>Full name</label>
@@ -163,6 +184,7 @@ export function RegisterPage() {
               required
             />
           </div>
+
           <div className="field">
             <label>Email</label>
             <input
@@ -176,6 +198,7 @@ export function RegisterPage() {
               required
             />
           </div>
+
           <div className="field">
             <label>Password</label>
             <div className="pass-wrap">
@@ -198,6 +221,7 @@ export function RegisterPage() {
               </button>
             </div>
           </div>
+
           <button
             type="submit"
             className="btn btn-primary auth-submit"
@@ -212,6 +236,7 @@ export function RegisterPage() {
             )}
           </button>
         </form>
+
         <p className="auth-switch">
           Already have an account? <Link to="/login">Sign in</Link>
         </p>

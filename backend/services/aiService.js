@@ -13,8 +13,8 @@ const callAI = async (systemPrompt, userMessage) => {
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        temperature: 0, // ✅ more stable
-        max_tokens: 700,
+        temperature: 0,
+        max_tokens: 500, // ✅ lower to reduce truncation / rambling
       },
       {
         headers: {
@@ -31,116 +31,232 @@ const callAI = async (systemPrompt, userMessage) => {
   }
 };
 
-// ✅ FINAL MAIN FUNCTION (PRODUCTION SAFE)
+// ✅ Try to recover partial JSON arrays
+const tryParseJSONArray = (raw) => {
+  try {
+    const clean = raw.replace(/```json|```/g, "").trim();
+    return JSON.parse(clean);
+  } catch {
+    try {
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const start = clean.indexOf("[");
+      const end = clean.lastIndexOf("]");
+      if (start !== -1 && end !== -1 && end > start) {
+        return JSON.parse(clean.slice(start, end + 1));
+      }
+    } catch {}
+
+    try {
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const start = clean.indexOf("[");
+      if (start !== -1) {
+        const partial = clean.slice(start);
+
+        // split objects roughly and parse valid ones
+        const matches = partial.match(/\{[\s\S]*?\}(?=\s*,|\s*\])/g) || [];
+        const items = [];
+        for (const m of matches) {
+          try {
+            items.push(JSON.parse(m));
+          } catch {}
+        }
+        return items;
+      }
+    } catch {}
+
+    return [];
+  }
+};
+
+// ✅ Small heuristic fallback
+const classifyFallback = (email) => {
+  const subject = (email.subject || "").toLowerCase();
+  const body = (email.body || "").toLowerCase();
+  const text = `${subject} ${body}`;
+
+  const has = (words) => words.some((w) => text.includes(w));
+
+  if (
+    has([
+      "interview",
+      "job",
+      "application",
+      "recruiter",
+      "hiring",
+      "resume",
+      "candidate",
+      "designer role",
+      "product designer",
+    ])
+  ) {
+    return {
+      category: "jobs",
+      isUrgent: false,
+      whatTheyWant: "Respond about a job or interview",
+    };
+  }
+
+  if (
+    has([
+      "otp",
+      "payment due",
+      "invoice overdue",
+      "security alert",
+      "password",
+      "sign in",
+      "login attempt",
+      "verification code",
+      "account recovery",
+      "2-step verification",
+    ])
+  ) {
+    return {
+      category: "urgent",
+      isUrgent: true,
+      whatTheyWant: "Check account or payment issue",
+    };
+  }
+
+  if (
+    has([
+      "google",
+      "chatgpt",
+      "system alert",
+      "notification",
+      "account update",
+      "policy update",
+      "shared with you",
+    ])
+  ) {
+    return {
+      category: "company",
+      isUrgent: false,
+      whatTheyWant: "Review the notification",
+    };
+  }
+
+  return {
+    category: "noise",
+    isUrgent: false,
+    whatTheyWant: "No action",
+  };
+};
+
+// ✅ FINAL MAIN FUNCTION
 const batchAnalyzeEmails = async (emails = []) => {
   try {
     if (!emails.length) return [];
 
-    // ✅ FIX 1: ALWAYS ADD ID
-    const safeEmails = emails.map((e, i) => ({
+    // ✅ Keep batch small and prompt compact
+    const limitedEmails = emails.slice(0, 5);
+
+    const safeEmails = limitedEmails.map((e, i) => ({
       id: i.toString(),
-      from: e.fromName || "",
-      subject: e.subject || "",
-      body: (e.bodyText || "").slice(0, 120),
+      from: (e.fromName || e.from || "").slice(0, 60),
+      subject: (e.subject || "").slice(0, 120),
+      body: (e.bodyText || "").replace(/\s+/g, " ").slice(0, 80),
     }));
 
-    // ✅ FIX 2: JSON INPUT (VERY IMPORTANT)
-    const userPrompt = JSON.stringify(safeEmails, null, 2);
+    // ✅ Compact JSON prompt
+    const userPrompt = JSON.stringify(safeEmails);
 
     const systemPrompt = `
 You are an email classifier.
 
-STRICT RULES:
-- Return ONLY valid JSON array
-- NO explanation
-- DO NOT change id
-- Use ONLY these categories:
-  urgent | jobs | bills | company | unreplied | noise
+Return ONLY a valid JSON array.
+No markdown.
+No explanation.
+Do not omit any id.
+Do not change any id.
+
+Allowed categories only:
+urgent, jobs, bills, company, unreplied, noise
+
+For each input item return:
+id, category, summary, whatTheyWant, suggestedReplies, isUrgent
 
 Rules:
-- Job / Interview → jobs
-- Payment / OTP / security → urgent
-- Google/system alerts → company
-- Unknown/promotions → noise
+- summary must be under 8 words
+- whatTheyWant must be under 6 words
+- suggestedReplies must contain exactly 2 short replies
+- replies must be under 4 words each
 
-Return format:
-[
-  {
-    "id": "0",
-    "category": "jobs",
-    "summary": "short summary",
-    "whatTheyWant": "action needed",
-    "suggestedReplies": ["reply1","reply2"],
-    "isUrgent": true
-  }
-]
-`;
+Example:
+[{"id":"0","category":"jobs","summary":"Interview invitation","whatTheyWant":"Confirm availability","suggestedReplies":["I’m interested","Need details"],"isUrgent":false}]
+`.trim();
 
     const raw = await callAI(systemPrompt, userPrompt);
-
     console.log("🧠 AI RAW:", raw);
 
-    // ✅ CLEAN RESPONSE
-    let parsed = [];
+    let parsed = tryParseJSONArray(raw);
+    if (!Array.isArray(parsed)) parsed = [];
 
-    try {
-      const clean = raw.replace(/```json|```/g, "").trim();
-      parsed = JSON.parse(clean);
-
-      if (!Array.isArray(parsed)) throw new Error();
-    } catch {
+    if (parsed.length === 0) {
       console.log("❌ JSON FAILED → FALLBACK");
-      parsed = [];
     }
 
-    // ✅ CREATE MAP
     const map = {};
-    parsed.forEach((item, index) => {
-      if (!item) return;
-
-      const id = item.id?.toString();
-
+    parsed.forEach((item) => {
+      const id = item?.id?.toString?.();
       if (!id) return;
 
       map[id] = {
         id,
-        category: item.category || "noise",
-        summary: item.summary || "No summary",
-        whatTheyWant: item.whatTheyWant || "Check email",
-        suggestedReplies: item.suggestedReplies || ["Got it", "Thanks"],
-        isUrgent: item.isUrgent ?? item.category === "urgent",
+        category: [
+          "urgent",
+          "jobs",
+          "bills",
+          "company",
+          "unreplied",
+          "noise",
+        ].includes(item.category)
+          ? item.category
+          : "noise",
+        summary: (item.summary || "No summary").toString().slice(0, 80),
+        whatTheyWant: (item.whatTheyWant || "Check email")
+          .toString()
+          .slice(0, 60),
+        suggestedReplies:
+          Array.isArray(item.suggestedReplies) && item.suggestedReplies.length
+            ? item.suggestedReplies
+                .slice(0, 2)
+                .map((r) => String(r).slice(0, 40))
+            : ["Got it", "Thanks"],
+        isUrgent:
+          typeof item.isUrgent === "boolean"
+            ? item.isUrgent
+            : item.category === "urgent",
       };
     });
 
-    // ✅ FINAL SAFE MERGE
-    return safeEmails.map((email, index) => {
+    return safeEmails.map((email) => {
       const ai = map[email.id];
-
       if (ai) return ai;
 
-      // ✅ SMART FALLBACK
+      const fallback = classifyFallback(email);
       return {
         id: email.id,
-        category: email.subject.toLowerCase().includes("interview")
-          ? "jobs"
-          : email.subject.toLowerCase().includes("security")
-            ? "urgent"
-            : "noise",
+        category: fallback.category,
         summary: email.subject || "No subject",
-        whatTheyWant: "Check manually",
-        suggestedReplies: ["Got it", "Will check"],
-        isUrgent: email.subject.toLowerCase().includes("security"),
+        whatTheyWant: fallback.whatTheyWant,
+        suggestedReplies:
+          fallback.category === "jobs"
+            ? ["I’m interested", "Need details"]
+            : fallback.category === "urgent"
+              ? ["I’ll check", "Thanks"]
+              : ["Got it", "Thanks"],
+        isUrgent: fallback.isUrgent,
       };
     });
   } catch (err) {
     console.error("🔥 BATCH AI FAILED:", err.message);
 
-    return emails.map((e, i) => ({
+    return emails.slice(0, 5).map((e, i) => ({
       id: i.toString(),
       category: "noise",
       summary: e?.subject || "Error",
       whatTheyWant: "No action",
-      suggestedReplies: ["OK"],
+      suggestedReplies: ["OK", "Thanks"],
       isUrgent: false,
     }));
   }

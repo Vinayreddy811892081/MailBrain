@@ -1,26 +1,36 @@
 // services/api.js
 import axios from "axios";
 
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 const api = axios.create({
-  baseURL: (import.meta.env.VITE_API_URL || "http://localhost:5000") + "/api",
+  baseURL: `${BASE_URL}/api`,
   withCredentials: true,
 });
 
-//aaaaaaaaaaaaaaaaaa
-// Attach JWT token to every request
+// Attach JWT token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("mb_token"); // ✅ FIX
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const token = localStorage.getItem("mb_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-// Handle 401 globally
+// Handle errors globally
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
-      console.log("401 ERROR - TOKEN ISSUE");
+    if (err.code === "ERR_NETWORK") {
+      console.error("🚨 NETWORK ERROR - Backend not reachable");
     }
+
+    if (err.response?.status === 401) {
+      console.warn("🔐 401 - Token expired or invalid");
+      localStorage.removeItem("mb_token");
+      window.location.href = "/login";
+    }
+
     return Promise.reject(err);
   },
 );
