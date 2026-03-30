@@ -166,7 +166,7 @@ router.get("/google/callback", async (req, res) => {
     await user.save();
 
     // ✅ go back to app, do NOT log in as Google account
-    res.redirect(`${process.env.FRONTEND_URL}/app?gmail_connected=1`);
+    res.redirect(`${frontendUrl}/app?gmail_connected=1`);
   } catch (err) {
     console.error("Google auth error:", err);
     res.redirect(`${process.env.FRONTEND_URL}/app?gmail_connected=0`);
