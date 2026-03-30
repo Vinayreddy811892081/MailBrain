@@ -71,10 +71,10 @@ export default function ConnectModal({ onClose, onConnected }) {
           Connect your Gmail securely with Google
         </p>
 
-        <div style={{ textAlign: "center", margin: "10px 0" }}>
+        <div className="manual-toggle-wrap">
           <button
             type="button"
-            className="link-btn"
+            className="manual-toggle-btn"
             onClick={() => setShowManual((p) => !p)}
           >
             {showManual ? "Hide manual setup" : "Use manual IMAP instead"}
