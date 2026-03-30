@@ -138,11 +138,13 @@ router.get("/google", async (req, res) => {
 
 // ─── GOOGLE CALLBACK (CONNECT ONLY, NOT LOGIN) ─────────────
 router.get("/google/callback", async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
   try {
     const { code, state } = req.query;
 
     if (!code || !state) {
-      return res.redirect(`${process.env.FRONTEND_URL}/app`);
+      return res.redirect(`${frontendUrl}/app`);
     }
 
     const { tokens } = await oAuth2Client.getToken(code);
@@ -153,10 +155,9 @@ router.get("/google/callback", async (req, res) => {
 
     const user = await User.findById(state);
     if (!user) {
-      return res.redirect(`${process.env.FRONTEND_URL}/app`);
+      return res.redirect(`${frontendUrl}/app`);
     }
 
-    // ✅ attach Gmail to the currently logged-in MailBrain user
     user.google = {
       email: data.email,
       refreshToken: tokens.refresh_token || user.google?.refreshToken || "",
@@ -165,21 +166,20 @@ router.get("/google/callback", async (req, res) => {
 
     await user.save();
 
-    // ✅ go back to app, do NOT log in as Google account
-    res.redirect(`${frontendUrl}/app?gmail_connected=1`);
+    return res.redirect(`${frontendUrl}/app?gmail_connected=1`);
   } catch (err) {
     console.error("Google auth error:", err);
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
-    // if user already has google connected, don't treat it as a hard failure
     try {
+      const { state } = req.query;
       const existingUser = state ? await User.findById(state) : null;
+
       if (existingUser?.google?.email) {
         return res.redirect(`${frontendUrl}/app?gmail_connected=1`);
       }
     } catch {}
 
-    res.redirect(`${frontendUrl}/app?gmail_connected=0`);
+    return res.redirect(`${frontendUrl}/app?gmail_connected=0`);
   }
 });
 
