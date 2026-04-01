@@ -15,7 +15,6 @@ export default function Landing() {
 
   return (
     <div className="landing">
-      {/* Nav */}
       <nav className="land-nav">
         <div className="brand">
           <Brain size={24} color="#6c63ff" />
@@ -34,21 +33,23 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero */}
       <section className="hero">
         <div className="hero-badge">
-          <Zap size={12} /> AI-powered · IMAP · No Gmail API needed
+          <Zap size={12} /> AI-powered · Gmail + IMAP support
         </div>
+
         <h1 className="hero-title">
           Your inbox,
           <br />
           <span className="hero-gradient">finally intelligent</span>
         </h1>
+
         <p className="hero-sub">
           MailBrain reads your emails, summarizes what matters, and drafts
-          replies — using IMAP, so it works with Gmail, Outlook, Yahoo, and any
-          email. No OAuth, no Google approval.
+          replies — with secure Gmail connection and IMAP support for other
+          providers like Outlook, Yahoo, and more.
         </p>
+
         <div className="hero-actions">
           <button
             className="btn btn-primary hero-cta"
@@ -59,7 +60,6 @@ export default function Landing() {
           <p className="hero-note">₹99/month after trial · Cancel anytime</p>
         </div>
 
-        {/* Mock UI */}
         <div className="hero-mockup">
           <div className="mock-sidebar">
             <div className="mock-brand">🧠 MailBrain</div>
@@ -78,6 +78,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
+
           <div className="mock-list">
             <div className="mock-email active">
               <div className="mock-from">Ravi Sharma (CEO)</div>
@@ -87,6 +88,7 @@ export default function Landing() {
               </div>
               <span className="tag tag-urgent">Urgent</span>
             </div>
+
             <div className="mock-email">
               <div className="mock-from">Priya (Client — Acme)</div>
               <div className="mock-subject">Follow-up on proposal</div>
@@ -96,6 +98,7 @@ export default function Landing() {
               <span className="tag tag-unreplied">Unreplied 6d</span>
             </div>
           </div>
+
           <div className="mock-detail">
             <div className="mock-detail-header">
               <div className="mock-detail-from">Ravi Sharma (CEO)</div>
@@ -124,7 +127,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features */}
       <section className="features">
         {[
           {
@@ -156,7 +158,6 @@ export default function Landing() {
         ))}
       </section>
 
-      {/* Pricing */}
       <section className="pricing">
         <h2>Simple pricing</h2>
         <div className="price-card">
@@ -196,6 +197,21 @@ export default function Landing() {
           <Brain size={18} color="#6c63ff" /> MailBrain
         </div>
         <p>© 2024 MailBrain · Privacy-first AI email assistant</p>
+
+        <div style={{ marginTop: "10px" }}>
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: "13px",
+              color: "#b9b9c9",
+              textDecoration: "none",
+            }}
+          >
+            Privacy Policy
+          </a>
+        </div>
       </footer>
     </div>
   );

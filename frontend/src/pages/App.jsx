@@ -47,15 +47,26 @@ export default function AppPage() {
     const params = new URLSearchParams(window.location.search);
     const gmailConnected = params.get("gmail_connected");
 
-    if (gmailConnected === "1") {
-      refreshUser();
-      toast.success("Gmail connected successfully");
+    const handleGmailRedirect = async () => {
+      if (!gmailConnected) return;
+
+      const alreadyConnected = !!user?.google?.email;
+
+      if (gmailConnected === "1") {
+        await refreshUser();
+        toast.success("Gmail connected successfully");
+      } else if (gmailConnected === "0") {
+        // ✅ don't show false failure if Gmail is already connected
+        if (!alreadyConnected) {
+          toast.error("Gmail connection failed");
+        }
+      }
+
       window.history.replaceState({}, document.title, "/app");
-    } else if (gmailConnected === "0") {
-      toast.error("Gmail connection failed");
-      window.history.replaceState({}, document.title, "/app");
-    }
-  }, [refreshUser]);
+    };
+
+    handleGmailRedirect();
+  }, [refreshUser, user]);
 
   useEffect(() => {
     const imapConnected = !!user?.emailAccount?.connected;
