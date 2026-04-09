@@ -15,6 +15,8 @@ app.use((req, res, next) => {
 
 // ─── CORS (FIXED) ───────────────────────
 const allowedOrigins = [
+  "https://mailbrain.in",
+  "https://www.mailbrain.in",
   "https://mail-brain-sepia.vercel.app",
   "http://localhost:5173",
   "http://localhost:3000",
