@@ -58,7 +58,7 @@ export default function Privacy() {
           </h1>
 
           <p style={{ color: "var(--text2)", fontSize: "15px" }}>
-            Effective date: April 2026
+            Effective date: April 2026 · Last updated: April 2026
           </p>
         </div>
 
@@ -68,6 +68,10 @@ export default function Privacy() {
             their email accounts, view categorized inbox messages, generate
             summaries, and draft or send replies. This Privacy Policy explains
             what data we access, how we use it, and what choices users have.
+          </p>
+          <p style={textStyle}>
+            MailBrain only accesses Gmail data after the user has explicitly
+            granted permission through Google's OAuth consent flow.
           </p>
         </section>
 
