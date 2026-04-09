@@ -58,6 +58,10 @@ export default function Landing() {
             Try free for 5 days <ArrowRight size={16} />
           </button>
           <p className="hero-note">₹99/month after trial · Cancel anytime</p>
+          <p className="hero-note">
+            We only access your emails with your permission and do not
+            permanently store raw email content.
+          </p>
         </div>
 
         <div className="hero-mockup">
@@ -200,14 +204,10 @@ export default function Landing() {
 
         <div style={{ marginTop: "10px" }}>
           <a
-            href="/privacy.html"
+            href="/privacy"
             target="_blank"
             rel="noreferrer"
-            style={{
-              fontSize: "13px",
-              color: "#b9b9c9",
-              textDecoration: "none",
-            }}
+            className="land-footer-link"
           >
             Privacy Policy
           </a>

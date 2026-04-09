@@ -31,6 +31,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html, body, #root {
+  min-height: 100%;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -38,9 +42,11 @@ body {
   font-size: 15px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
-  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 100vh;
 }
+
 
 h1, h2, h3, h4, .brand {
   font-family: 'Syne', sans-serif;

@@ -6,6 +6,7 @@ import Landing from "./pages/Landing";
 import { LoginPage, RegisterPage } from "./pages/Auth";
 import AppPage from "./pages/App";
 import Payment from "./pages/Payment";
+import Privacy from "./pages/Privacy"; // ✅ ADD THIS
 
 // Only checks login
 function PrivateRoute({ children }) {
@@ -43,7 +44,6 @@ export default function App() {
 
         <Routes>
           <Route path="/" element={<Landing />} />
-
           <Route
             path="/login"
             element={
@@ -52,7 +52,6 @@ export default function App() {
               </GuestRoute>
             }
           />
-
           <Route
             path="/register"
             element={
@@ -61,7 +60,7 @@ export default function App() {
               </GuestRoute>
             }
           />
-
+          <Route path="/privacy" element={<Privacy />} /> {/* ✅ ADD THIS */}
           <Route
             path="/app"
             element={
@@ -72,7 +71,6 @@ export default function App() {
               </PrivateRoute>
             }
           />
-
           <Route
             path="/payment"
             element={
@@ -81,7 +79,6 @@ export default function App() {
               </PrivateRoute>
             }
           />
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
