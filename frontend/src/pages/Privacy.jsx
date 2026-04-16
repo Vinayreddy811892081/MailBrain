@@ -31,6 +31,7 @@ export default function Privacy() {
         >
           ← Back to MailBrain
         </a>
+
         <div style={{ marginBottom: "24px" }}>
           <div
             style={{
@@ -63,15 +64,22 @@ export default function Privacy() {
         </div>
 
         <section style={{ marginBottom: "24px" }}>
-          <p style={{ color: "var(--text2)", lineHeight: 1.8 }}>
+          <p style={textStyle}>
             MailBrain is an AI-powered email assistant that helps users connect
             their email accounts, view categorized inbox messages, generate
-            summaries, and draft or send replies. This Privacy Policy explains
-            what data we access, how we use it, and what choices users have.
+            summaries, and draft or send replies.
           </p>
+
           <p style={textStyle}>
             MailBrain only accesses Gmail data after the user has explicitly
-            granted permission through Google's OAuth consent flow.
+            granted permission through Google&apos;s OAuth consent flow.
+          </p>
+
+          <p style={textStyle}>
+            Google user data is used only to provide core application
+            functionality such as fetching emails, generating summaries,
+            categorizing messages, suggesting replies, and sending replies when
+            the user explicitly requests it.
           </p>
         </section>
 
@@ -108,28 +116,66 @@ export default function Privacy() {
             <li>MailBrain does not sell Gmail data.</li>
             <li>MailBrain does not use Gmail data for advertising.</li>
             <li>
+              MailBrain does not use Google user data for any purpose unrelated
+              to MailBrain&apos;s core email-assistant functionality.
+            </li>
+            <li>
               MailBrain does not send emails automatically without explicit user
               action.
             </li>
             <li>
-              MailBrain does not permanently store raw email content unless
-              strictly required for temporary app functionality.
+              MailBrain does not use Google user data to train generalized AI or
+              machine learning models.
             </li>
           </ul>
         </Section>
 
-        <Section title="4. Data storage and retention">
+        <Section title="4. Data protection and security">
           <p style={textStyle}>
-            MailBrain aims to minimize stored data. Raw email content is
-            processed for summaries and reply assistance. Limited metadata and
-            AI-generated summaries may be temporarily cached to improve
-            performance. Users can disconnect their account, which removes
-            connected-account data and cached email data associated with the
-            app.
+            MailBrain uses industry-standard security measures to protect user
+            data. Communication with external services, including Gmail APIs, is
+            encrypted using HTTPS.
+          </p>
+
+          <p style={textStyle}>
+            Access tokens and connected-account credentials are handled securely
+            and used only for authorized API requests required to provide core
+            MailBrain functionality.
+          </p>
+
+          <p style={textStyle}>
+            MailBrain does not share, sell, or transfer Google user data to
+            third parties for advertising or unrelated purposes.
           </p>
         </Section>
 
-        <Section title="5. User control">
+        <Section title="5. Data retention and deletion">
+          <p style={textStyle}>
+            MailBrain minimizes data storage. Email content is processed
+            temporarily to generate summaries, categorization, and reply
+            suggestions.
+          </p>
+
+          <ul style={listStyle}>
+            <li>
+              Raw email content is not permanently stored on MailBrain servers.
+            </li>
+            <li>
+              Limited metadata and AI-generated summaries may be temporarily
+              cached to improve performance.
+            </li>
+            <li>
+              Cached summaries and related metadata are typically retained for
+              less than 24 hours unless a shorter deletion event occurs first.
+            </li>
+            <li>
+              When a user disconnects their Gmail account, associated connected
+              account data and cached email data are deleted from MailBrain.
+            </li>
+          </ul>
+        </Section>
+
+        <Section title="6. User control">
           <ul style={listStyle}>
             <li>Users choose whether to connect Gmail.</li>
             <li>Users can disconnect Gmail at any time.</li>
@@ -137,18 +183,28 @@ export default function Privacy() {
           </ul>
         </Section>
 
-        <Section title="6. Third-party services">
+        <Section title="7. Third-party services">
           <p style={textStyle}>
             MailBrain may use secure third-party infrastructure and AI providers
             to process authorized email data for summaries and reply assistance.
-            These services are used only to operate core MailBrain features.
+            These services are used only to operate MailBrain&apos;s core
+            features.
           </p>
         </Section>
 
-        <Section title="7. Contact">
+        <Section title="8. Compliance with Google API Services User Data Policy">
           <p style={textStyle}>
-            If you have questions about this Privacy Policy or MailBrain’s data
-            practices, contact:
+            MailBrain complies with the Google API Services User Data Policy.
+            Google user data is only used to provide and improve core
+            application functionality such as email summarization,
+            categorization, and user-requested reply assistance.
+          </p>
+        </Section>
+
+        <Section title="9. Contact">
+          <p style={textStyle}>
+            If you have questions about this Privacy Policy or MailBrain&apos;s
+            data practices, contact:
           </p>
           <p style={{ ...textStyle, fontWeight: 600 }}>
             vinayreddy0056@gmail.com
