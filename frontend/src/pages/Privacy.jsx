@@ -136,6 +136,11 @@ export default function Privacy() {
             data. Communication with external services, including Gmail APIs, is
             encrypted using HTTPS.
           </p>
+          <p style={textStyle}>
+            MailBrain limits access to authorized systems and processes only,
+            and sensitive Google user data is handled only as needed to provide
+            the requested email assistant features.
+          </p>
 
           <p style={textStyle}>
             Access tokens and connected-account credentials are handled securely
